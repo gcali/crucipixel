@@ -8,8 +8,9 @@ from gi.repository import Gtk
 from gi.repository.Gdk import EventMask
 import cairo
 from math import pi,sqrt
-from geometry import Point
+from geometry import Point, Rectangle
 from _operator import pos
+from sys import stderr
 
 def _transform_event(event_type,e,w):
     x,y=w.toWidgetCoords.transform_point(e.x,e.y)
@@ -45,6 +46,7 @@ class Root(Gtk.DrawingArea):
         self.connect("button-release-event", self.on_mouse_up)
         self.connect("motion-notify-event", self.on_mouse_move)
         self.set_min_size(width,height)
+        self._lw_signals = {}
         
     def set_min_size(self, sizeX:"num", sizeY:"num"):
         self.set_size_request(sizeX, sizeY)
@@ -77,21 +79,55 @@ class Root(Gtk.DrawingArea):
     
     def invalidate(self):
         self.queue_draw()
+    
+    def register_signal_to_child(self,signal_name,widget):
+        print("I've been called!")
+        try:
+            self._lw_signals[signal_name].append(widget)
+            print("I existed!")
+        except KeyError:
+            self._lw_signals[signal_name] = []
+            return self.register_signal_to_child(widget, signal_name)
+
+    def broadcast_lw_signal(self,signal_name,*args): 
+        print(self._lw_signals)
+        for w in self._lw_signals[signal_name]:
+            w.handle_signal(signal_name,*args)
+    
 
 class Widget:
+    
+    NO_CLIP=None
 
     def __init__(self, sizeX=0, sizeY=0):
         self.size = (sizeX,sizeY)
+        self.ID = "Widget"
+        self.signals = {} 
+
         self._fromTranslate = cairo.Matrix()
         self._fromRotate = cairo.Matrix()
         self._fromScale = cairo.Matrix()
         self._toTranslate = cairo.Matrix()
         self._toRotate = cairo.Matrix()
         self._toScale = cairo.Matrix()
-        self.ID = "Widget"
+        self._father = None
+        self._clip_start = Widget.NO_CLIP
+        self._clip_width = Widget.NO_CLIP
+        self._clip_height = Widget.NO_CLIP
     
     def __str__(self):
         return self.ID
+    
+    @property
+    def father(self):
+        return self._father
+    
+    @father.setter
+    def father(self,value):
+        for signal in self.signals.keys():
+            value.register_signal_to_child(signal,self)
+        self._father = value
+    
     
     @property
     def fromWidgetCoords(self):
@@ -122,9 +158,26 @@ class Widget:
         self._fromScale.scale(x,y)
         self._toScale.scale(1/x,1/y)
 
-    def clip_path(self,c):
-        pass
+    def is_clip_set(self):
+        return self._clip_start == Widget.NO_CLIP
     
+    @property
+    def clip_rectangle(self):
+        return Rectangle(self._clip_start,self._clip_width,self._clip_height)
+    @clip_rectangle.setter
+    def clip_rectangle(self,value):
+        self._clip_start = value.start
+        self._clip_width = value.width
+        self._clip_height = value.height
+
+    def get_vertexes(self):
+        return [self._clip_start,
+                self._clip_start + Point(self._clip_width,0),
+                self._clip_start + Point(0,self._clip_height)] 
+    
+    def get_vertexes_father_coordinates(self):
+        return map(self.fromWidgetCoords.transform_point,self.get_vertexes())
+
     def on_draw(self,w,c):
         pass
     
@@ -142,6 +195,29 @@ class Widget:
     
     def invalidate(self):
         self.father.invalidate()
+    
+    def register_signal(self,signal_name:"str",callback:"function"):
+        try:
+            self.signals[signal_name].append(callback)
+            print("I've been succesfully added")
+        except KeyError:
+            self.signals[signal_name] = []
+            return self.register_signal(signal_name, callback)
+        if self.father:
+            self.father.register_signal_to_child(signal_name,self)
+    
+    def handle_signal(self,signal_name,*args):
+        try:
+            for callback in self.signals[signal_name]:
+                callback(*args)
+        except KeyError:
+            print("No signal {} registered to {}".format(signal_name,self.ID),file=stderr)
+    
+    def broadcast_lw_signal(self,signal_name,*args):
+        return self.father.broadcast_lw_signal(signal_name,*args)
+    
+    def emit_lw_signal(self,dest:"Widget",signal_name,*args):
+        dest.handle_signal(signal_name,*args)
 
 
 class Circle(Widget):
@@ -282,6 +358,13 @@ class Container(Widget):
         def take_on_mouse_move(w):
             return w.on_mouse_move
         return self._handle_event(w,e,take_on_mouse_move)
+    
+    def register_signal_to_child(self, signal_name:"str", widget:"Widget"):
+        if signal_name in self.signals:
+            def handle_child(*args):
+                return widget.handle_signal(signal_name,*args)
+            self.register_signal(signal_name, handle_child)
+
                         
 
 class UncheckedContainer(Container):

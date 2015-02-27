@@ -37,6 +37,10 @@ class Grid(lw.Widget):
         self._selection_start = Point(0,0)
         self._selection_backup = []
         self._cell_color = {}
+
+        def handle_hi():
+            print("Hi! I've been called by a signal!")
+        self.register_signal("hi", handle_hi)
     
     @property
     def _total_height(self):
@@ -63,7 +67,6 @@ class Grid(lw.Widget):
             c.stroke()
             
         for (k,v) in self._cell_color.items():
-#             print(k,v)
             c.set_source_rgb(*v)
             c.rectangle(self._start.x + k[0] * self.cell_width + 2,
                         self._start.y + k[1] * self.cell_height + 2,
@@ -73,7 +76,7 @@ class Grid(lw.Widget):
                         
 
         c.restore()
-        
+    
     def _get_cell_id(self,pos:"Point") -> "(col,row)":
             cell_col = int((pos.x - (self._start.x -.5)) // self.cell_width)
             cell_row = int((pos.y - (self._start.y -.5)) // self.cell_height)
@@ -81,6 +84,7 @@ class Grid(lw.Widget):
         
     
     def on_mouse_down(self, w, e):
+        self.broadcast_lw_signal("hi")
         if self.is_point_in(Point(e.x,e.y)):
             self.is_mouse_down = True
             cell_col,cell_row = self._get_cell_id(e)
@@ -108,6 +112,7 @@ class Grid(lw.Widget):
 
     def on_mouse_move(self, w, e):
         if self.is_mouse_down and self.is_point_in(Point(e.x,e.y)):
+            #TODO Clamp e.x,e.y in width and height
             cell_col,cell_row = self._get_cell_id(e)
             if self.selection_style == Grid.SELECTION_FREE:
                 self._cell_color[cell_col,cell_row] = self._selected_color
@@ -140,9 +145,7 @@ class Grid(lw.Widget):
 class Selector(lw.Widget):
     
     def __init__(self,*args,**kwargs):
-        super().__init__(*args,**kwargs)
-
-
+        super().__init__(*args,**kwargs) 
     
 
 if __name__ == '__main__':
@@ -151,5 +154,6 @@ if __name__ == '__main__':
     root = lw.Root(500,500)
     cruci = Grid(start=Point(50,50),width=20,height=20)
     root.set_child(cruci)
+
     win.add(root)
     win.start_main()

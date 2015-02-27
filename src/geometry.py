@@ -28,3 +28,11 @@ class Point:
     
     def __str__(self):
         return "({},{})".format(self.x,self.y) 
+
+class Rectangle:
+    
+    def __init__(self,start:"Point",width:"num",height:"num"):
+        self.start = start
+        self.width = width
+        self.height = height
+        
