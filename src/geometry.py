@@ -28,6 +28,9 @@ class Point:
     
     def __str__(self):
         return "({},{})".format(self.x,self.y) 
+    
+    def __eq__(self,other):
+        return self.x == other.x and self.y == other.y
 
 class Rectangle:
     
@@ -35,4 +38,7 @@ class Rectangle:
         self.start = start
         self.width = width
         self.height = height
+    
+    def __str__(self):
+        return "[{},w{},h{}]".format(self.start,self.width,self.height)
         

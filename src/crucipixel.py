@@ -5,9 +5,10 @@ Created on Feb 22, 2015
 '''
 
 from gi.repository import Gtk,Gdk
-from geometry import Point
+from geometry import Point, Rectangle
 import lightwidgets as lw
 from support import get_from_to_inclusive
+from collections import OrderedDict
 
 class Grid(lw.Widget):
     
@@ -19,6 +20,7 @@ class Grid(lw.Widget):
                  width=10,height=10,
                  *args, **kwargs):
         super().__init__(*args,**kwargs)
+        self.ID = "CrucipixelWindow"
 
         self.cols=cols
         self.rows=rows
@@ -32,11 +34,13 @@ class Grid(lw.Widget):
         
         self.selection_style = Grid.SELECTION_RECTANGLE
 
-        self._start=Point(start.x+.5,start.y+.5)
+        self.set_translate(start.x+.5,start.y+.5)
         self._selected_color = (0,0,0)
         self._selection_start = Point(0,0)
         self._selection_backup = []
         self._cell_color = {}
+        self.clip_rectangle = Rectangle(Point(0,0),self._total_height,self._total_width)
+        print(self.clip_rectangle)
 
         def handle_hi():
             print("Hi! I've been called by a signal!")
@@ -49,7 +53,7 @@ class Grid(lw.Widget):
     @property
     def _total_width(self):
         return self.cols * self.cell_width
-
+    
     def on_draw(self,w,c):
         c.save()
         c.set_line_width(1)
@@ -57,19 +61,23 @@ class Grid(lw.Widget):
         width = self._total_width
         height= self._total_height
         for x in range(0,width+self.cell_width,self.cell_width):
-            c.move_to(self._start.x+x,self._start.y)
-            c.line_to(self._start.x+x,self._start.y+height)
+            c.move_to(x,0)
+            c.line_to(x,height)
             c.stroke() 
 
         for y in range(0,height+self.cell_height,self.cell_height):
-            c.move_to(self._start.x,self._start.y + y)
-            c.line_to(self._start.x+width,self._start.y+y)
+            c.move_to(0,y)
+            c.line_to(width,y)
             c.stroke()
+        
+        c.move_to(0,0)
+        c.line_to(-10,-10)
+        c.stroke()
             
         for (k,v) in self._cell_color.items():
             c.set_source_rgb(*v)
-            c.rectangle(self._start.x + k[0] * self.cell_width + 2,
-                        self._start.y + k[1] * self.cell_height + 2,
+            c.rectangle(k[0] * self.cell_width + 2,
+                        k[1] * self.cell_height + 2,
                         self.cell_width - 4,
                         self.cell_height - 4)
             c.fill()
@@ -78,11 +86,11 @@ class Grid(lw.Widget):
         c.restore()
     
     def _get_cell_id(self,pos:"Point") -> "(col,row)":
-            cell_col = int((pos.x - (self._start.x -.5)) // self.cell_width)
-            cell_row = int((pos.y - (self._start.y -.5)) // self.cell_height)
+            cell_col = int(pos.x // self.cell_width)
+            cell_row = int(pos.y // self.cell_height)
             return cell_col,cell_row
         
-    
+#     
     def on_mouse_down(self, w, e):
         self.broadcast_lw_signal("hi")
         if self.is_point_in(Point(e.x,e.y)):
@@ -139,21 +147,64 @@ class Grid(lw.Widget):
         return False
     
     def is_point_in(self, p:"Point"):
-        return (p.x >= self._start.x and p.x <= self._start.x + self.cols * self.cell_width) and\
-               (p.y >= self._start.y and p.y <= self._start.y + self.rows * self.cell_height)
+        return (p.x >= 0 and p.x <= self.cols * self.cell_width) and\
+               (p.y >= 0 and p.y <= self.rows * self.cell_height)
 
 class Selector(lw.Widget):
     
-    def __init__(self,*args,**kwargs):
+    def __init__(self,start=Point(0,0),options=None,*args,**kwargs):
         super().__init__(*args,**kwargs) 
+        self.ID = "SelectorWindow"
+        self.start = start
+        if options is None:
+            self.options = OrderedDict(
+                                [("Left",(0,0,0)),
+                                 ("Right",(1,1,1)),
+                                 ("Middle",(.8,.8,.8))])
+        else:
+            self.options = options
+    
+    
+    def on_mouse_down(self, w, e):
+        super().on_mouse_down(w,e)
+
+    
+    
+    def on_draw(self,w,c):
+        c.save()
+        c.rectangle(0,0,100,80)
+        c.stroke()
+        padding = 5
+        size = 20
+        start = size + padding
+        c.select_font_face("sans-serif")
+        c.set_font_size(size)
+        c.set_line_width(1)
+        for line,color in self.options.items():
+            c.rectangle(padding,start,size,-size)
+            c.set_source_rgb(*color)
+            c.fill_preserve()
+            c.set_source_rgb(0,0,0)
+            c.stroke()
+            c.move_to(padding + size + padding,start)
+            print(c.text_extents(line))
+            c.show_text(line)
+            start += size + padding
+        c.restore()
+        print("Hi! I'm a nice selector!")
     
 
 if __name__ == '__main__':
     win = lw.MainWindow(title="Crucipixel Dev")
     win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.8,.8,.8,1))
     root = lw.Root(500,500)
-    cruci = Grid(start=Point(50,50),width=20,height=20)
-    root.set_child(cruci)
+    simple_container = lw.UncheckedContainer()
+    simple_container.ID = "SimpleContainer"
+    cruci = Grid(start=Point(80,80),cols=30,rows=30,width=20,height=20)
+    selector = Selector()
+    simple_container.add(selector)
+    simple_container.add(cruci)
+    root.set_child(simple_container)
 
     win.add(root)
     win.start_main()

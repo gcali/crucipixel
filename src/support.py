@@ -15,5 +15,12 @@ def get_from_to_inclusive(a,b):
         yield i
     yield b
 
+class DefaultDict(dict): 
+    def __missing__(self,key):
+        try:
+            return self.default
+        except AttributeError:
+            raise KeyError(str(key))
+   
 if __name__ == '__main__':
     pass

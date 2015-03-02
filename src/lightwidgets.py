@@ -33,6 +33,9 @@ class MouseEvent:
         self.y = y
         self.event_type = event_type
         self.button = button
+    
+    def __copy__(self):
+        return MouseEvent(self.event_type,self.x,self.y,self.button)
 
 class Root(Gtk.DrawingArea):
     
@@ -58,7 +61,11 @@ class Root(Gtk.DrawingArea):
     def on_draw(self, widget:"Widget", context:"cairo.Context"):
         context.save()
         context.transform(self.child.fromWidgetCoords)
-        self.child.clip_path(context)
+        if self.child.is_clip_set():
+            rectangle = self.child.clip_rectangle
+            context.rectangle(rectangle.start.x,rectangle.start.y,
+                              rectangle.width,rectangle.height)
+            context.clip()
         self.child.on_draw(self,context)
         context.restore()
     
@@ -80,14 +87,14 @@ class Root(Gtk.DrawingArea):
     def invalidate(self):
         self.queue_draw()
     
-    def register_signal_to_child(self,signal_name,widget):
+    def register_signal_for_child(self,signal_name,widget):
         print("I've been called!")
         try:
             self._lw_signals[signal_name].append(widget)
             print("I existed!")
         except KeyError:
             self._lw_signals[signal_name] = []
-            return self.register_signal_to_child(widget, signal_name)
+            return self.register_signal_for_child(widget, signal_name)
 
     def broadcast_lw_signal(self,signal_name,*args): 
         print(self._lw_signals)
@@ -116,7 +123,15 @@ class Widget:
         self._clip_height = Widget.NO_CLIP
     
     def __str__(self):
-        return self.ID
+        return str(self.ID)
+
+    @property
+    def start(self):
+        return Point(self.fromWidgetCoords.transform_point(0,0))
+    
+    @start.setter
+    def start(self,value):
+        self.set_translate(value.x+.5, value.y+.5)
     
     @property
     def father(self):
@@ -124,8 +139,10 @@ class Widget:
     
     @father.setter
     def father(self,value):
+        print(self,"Setting father to:", str(value))
         for signal in self.signals.keys():
-            value.register_signal_to_child(signal,self)
+            print(self,"Adding signal {} to {}".format(signal,str(value)))
+            value.register_signal_for_child(signal,self)
         self._father = value
     
     
@@ -159,7 +176,7 @@ class Widget:
         self._toScale.scale(1/x,1/y)
 
     def is_clip_set(self):
-        return self._clip_start == Widget.NO_CLIP
+        return not (self._clip_start is None)
     
     @property
     def clip_rectangle(self):
@@ -199,12 +216,13 @@ class Widget:
     def register_signal(self,signal_name:"str",callback:"function"):
         try:
             self.signals[signal_name].append(callback)
-            print("I've been succesfully added")
+            print(self,"I've been succesfully added")
         except KeyError:
             self.signals[signal_name] = []
             return self.register_signal(signal_name, callback)
         if self.father:
-            self.father.register_signal_to_child(signal_name,self)
+            print(self, "Father was:",str(self.father))
+            self.father.register_signal_for_child(signal_name,self)
     
     def handle_signal(self,signal_name,*args):
         try:
@@ -336,11 +354,14 @@ class Container(Widget):
             child.on_draw(self,c)
             c.restore()
     
-    def _handle_event(self,w,e,f):
-        for child in reversed(self.list):
+    def _handle_event(self,w,e,f,force=False):
+        for child in reversed(list(self.list)):
             p = Point(child.toWidgetCoords.transform_point(e.x,e.y))
-            if child.is_point_in(p):
-                if f(child)(e,child):
+            if child.is_point_in(p) or force:
+                local_event = e.__copy__()
+                local_event.x = p.x
+                local_event.y = p.y
+                if (f(child))(self,local_event):
                     return True
         return False
     
@@ -352,18 +373,17 @@ class Container(Widget):
     def on_mouse_up(self, w, e):
         def take_on_mouse_up(w):
             return w.on_mouse_up
-        return self._handle_event(w,e,take_on_mouse_up)
+        return self._handle_event(w,e,take_on_mouse_up,True)
 
     def on_mouse_move(self, w, e):
         def take_on_mouse_move(w):
             return w.on_mouse_move
         return self._handle_event(w,e,take_on_mouse_move)
     
-    def register_signal_to_child(self, signal_name:"str", widget:"Widget"):
-        if signal_name in self.signals:
-            def handle_child(*args):
-                return widget.handle_signal(signal_name,*args)
-            self.register_signal(signal_name, handle_child)
+    def register_signal_for_child(self, signal_name:"str", widget:"Widget"):
+        def handle_child(*args):
+            return widget.handle_signal(signal_name,*args)
+        self.register_signal(signal_name, handle_child)
 
                         
 
@@ -377,6 +397,10 @@ class UncheckedContainer(Container):
     def list(self):
         for (i,w) in self._widget_list:
             yield w
+    
+    def add(self,widget):
+        self._widget_list.append((widget,widget))
+        widget.father = self
     
     def remove_id(self, id_v:"id"):
         index = None
