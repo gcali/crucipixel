@@ -88,16 +88,16 @@ class Root(Gtk.DrawingArea):
         self.queue_draw()
     
     def register_signal_for_child(self,signal_name,widget):
-        print("I've been called!")
+#         print("I've been called!")
         try:
             self._lw_signals[signal_name].append(widget)
-            print("I existed!")
+#             print("I existed!")
         except KeyError:
             self._lw_signals[signal_name] = []
             return self.register_signal_for_child(widget, signal_name)
 
     def broadcast_lw_signal(self,signal_name,*args): 
-        print(self._lw_signals)
+#         print(self._lw_signals)
         for w in self._lw_signals[signal_name]:
             w.handle_signal(signal_name,*args)
     
@@ -139,9 +139,9 @@ class Widget:
     
     @father.setter
     def father(self,value):
-        print(self,"Setting father to:", str(value))
+#         print(self,"Setting father to:", str(value))
         for signal in self.signals.keys():
-            print(self,"Adding signal {} to {}".format(signal,str(value)))
+#             print(self,"Adding signal {} to {}".format(signal,str(value)))
             value.register_signal_for_child(signal,self)
         self._father = value
     
@@ -216,12 +216,12 @@ class Widget:
     def register_signal(self,signal_name:"str",callback:"function"):
         try:
             self.signals[signal_name].append(callback)
-            print(self,"I've been succesfully added")
+#             print(self,"I've been succesfully added")
         except KeyError:
             self.signals[signal_name] = []
             return self.register_signal(signal_name, callback)
         if self.father:
-            print(self, "Father was:",str(self.father))
+#             print(self, "Father was:",str(self.father))
             self.father.register_signal_for_child(signal_name,self)
     
     def handle_signal(self,signal_name,*args):
@@ -229,7 +229,8 @@ class Widget:
             for callback in self.signals[signal_name]:
                 callback(*args)
         except KeyError:
-            print("No signal {} registered to {}".format(signal_name,self.ID),file=stderr)
+            pass
+#             print("No signal {} registered to {}".format(signal_name,self.ID),file=stderr)
     
     def broadcast_lw_signal(self,signal_name,*args):
         return self.father.broadcast_lw_signal(signal_name,*args)
@@ -270,7 +271,7 @@ class Line(Widget):
         height=self.endP.x - self.startP.x
         c.rectangle(self.startP.x, self.startP.y,width,height)
         c.clip()
-        print(self,c.clip_extents())
+#         print(self,c.clip_extents())
 
 class Donut(Widget):
     

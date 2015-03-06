@@ -4,10 +4,11 @@ Created on Feb 22, 2015
 @author: giovanni
 '''
 
+import math
 from gi.repository import Gtk,Gdk
 from geometry import Point, Rectangle
 import lightwidgets as lw
-from support import get_from_to_inclusive
+from support import get_from_to_inclusive, DefaultDict
 from collections import OrderedDict
 
 class Grid(lw.Widget):
@@ -38,9 +39,10 @@ class Grid(lw.Widget):
         self._selected_color = (0,0,0)
         self._selection_start = Point(0,0)
         self._selection_backup = []
-        self._cell_color = {}
+        self._cell_color = DefaultDict()
+        self._cell_color.default = self.color_associations["middle"]
         self.clip_rectangle = Rectangle(Point(0,0),self._total_height,self._total_width)
-        print(self.clip_rectangle)
+        #print(self.clip_rectangle)
 
         def handle_hi():
             print("Hi! I've been called by a signal!")
@@ -115,7 +117,8 @@ class Grid(lw.Widget):
     def _select_rectangle(self, cell_col_end, cell_row_end):
         for c in get_from_to_inclusive(self._selection_start.col, cell_col_end):
             for r in get_from_to_inclusive(self._selection_start.row, cell_row_end):
-                self._selection_backup.append((c, r, self._cell_color.get((c, r), (.8, .8, .8))))
+#                 self._selection_backup.append((c, r, self._cell_color.get((c, r), (.8, .8, .8))))
+                self._selection_backup.append((c, r, self._cell_color[c, r]))
                 self._cell_color[c, r] = self._selected_color
 
     def on_mouse_move(self, w, e):
@@ -156,6 +159,8 @@ class Selector(lw.Widget):
         super().__init__(*args,**kwargs) 
         self.ID = "SelectorWindow"
         self.start = start
+        self.padding = 5
+        self.font_size = 20
         if options is None:
             self.options = OrderedDict(
                                 [("Left",(0,0,0)),
@@ -163,35 +168,71 @@ class Selector(lw.Widget):
                                  ("Middle",(.8,.8,.8))])
         else:
             self.options = options
+        self._total_height = 0
+        self._total_width = 0
     
     
     def on_mouse_down(self, w, e):
         super().on_mouse_down(w,e)
+    
+    @property
+    def total_height(self):
+        self._total_height * len(self.options.keys())
+    def total_width(self):
+        self._total_width
+        
+    def _get_rectangle_list(self,lines) -> "None//Raises: AttributeError":
+        size = self._get_rectangle_size()
+        print(size)
+        return [Rectangle(Point(self.padding, 
+                                self.padding*(1+i) + self.maxH * i),
+                          size, 
+                          size) for i in range(len(lines))]
+    
+    def _get_rectangle_size(self) -> "num//Raises: AttributeError":
+        if not hasattr(self, "maxW") or not hasattr(self, "maxH"):
+            raise AttributeError("Can't get size until first drawn")
+        return math.floor(self.maxH * .9) 
 
-    
-    
+    def _get_text_max_size(self, context, lines):
+        sizes = []
+        for l in lines:
+            xb, yb, width, height, _, _ = context.text_extents(l)
+            sizes.append(Rectangle(Point(xb, yb), width, height))
+        
+        maxW, maxH = 0, 0
+        for s in sizes:
+            maxW = max(maxW, s.width - s.start.x)
+            maxH = max(maxH, s.height - s.start.y)
+        
+        return maxH, maxW
+
     def on_draw(self,w,c):
         c.save()
-        c.rectangle(0,0,100,80)
-        c.stroke()
-        padding = 5
-        size = 20
-        start = size + padding
+        lines = self.options.keys()
+        maxH, maxW = self._get_text_max_size(c, lines)
+        self.maxH = maxH
+        self.maxW = maxW
+        rectangle_size = self._get_rectangle_size()
+        self._total_height = maxH
+        self._total_width = self.padding * 2 + rectangle_size + maxW
         c.select_font_face("sans-serif")
-        c.set_font_size(size)
+        c.set_font_size(self.font_size)
         c.set_line_width(1)
-        for line,color in self.options.items():
-            c.rectangle(padding,start,size,-size)
+        line_color_rectangle = zip(self.options.items(),self._get_rectangle_list(self.options.keys()))
+        for (line,color),rectangle in line_color_rectangle:
+            c.rectangle(rectangle.start.x,
+                        rectangle.start.y,
+                        rectangle.width,
+                        rectangle.height)
             c.set_source_rgb(*color)
             c.fill_preserve()
             c.set_source_rgb(0,0,0)
             c.stroke()
-            c.move_to(padding + size + padding,start)
-            print(c.text_extents(line))
+            c.move_to(rectangle.start.x + rectangle.width + self.padding, 
+                      math.floor(rectangle.start.y + self.maxH * .85))
             c.show_text(line)
-            start += size + padding
         c.restore()
-        print("Hi! I'm a nice selector!")
     
 
 if __name__ == '__main__':
