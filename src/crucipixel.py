@@ -46,7 +46,10 @@ class Grid(lw.Widget):
 
         def handle_hi():
             print("Hi! I've been called by a signal!")
+        def handle_select_color(name,value):
+            print(name,value)
         self.register_signal("hi", handle_hi)
+        self.register_signal("select_color",handle_select_color)
     
     @property
     def _total_height(self):
@@ -172,27 +175,26 @@ class Selector(lw.Widget):
         self._total_width = 0
     
     
-    def on_mouse_down(self, w, e):
-        super().on_mouse_down(w,e)
-    
     @property
     def total_height(self):
-        self._total_height * len(self.options.keys())
+        last_rectangle = self._get_rectangle_list(self.options.keys())[-1]
+        return last_rectangle.start.y + last_rectangle.height + 2 #add line width
+    @property
     def total_width(self):
-        self._total_width
+        rectangle = self._get_rectangle_list(self.options.keys())[0]
+        return rectangle.start.x + rectangle.width + self.padding + self.maxW
         
     def _get_rectangle_list(self,lines) -> "None//Raises: AttributeError":
         size = self._get_rectangle_size()
-        print(size)
         return [Rectangle(Point(self.padding, 
-                                self.padding*(1+i) + self.maxH * i),
+                                self.padding*(1+i) + size* i),
                           size, 
                           size) for i in range(len(lines))]
     
     def _get_rectangle_size(self) -> "num//Raises: AttributeError":
         if not hasattr(self, "maxW") or not hasattr(self, "maxH"):
             raise AttributeError("Can't get size until first drawn")
-        return math.floor(self.maxH * .9) 
+        return math.floor(self.maxH * .6) 
 
     def _get_text_max_size(self, context, lines):
         sizes = []
@@ -202,13 +204,35 @@ class Selector(lw.Widget):
         
         maxW, maxH = 0, 0
         for s in sizes:
+#             print(s)
             maxW = max(maxW, s.width - s.start.x)
             maxH = max(maxH, s.height - s.start.y)
         
         return maxH, maxW
+    
+    def on_mouse_down(self, w, e):
+        rectangle_list = self._get_rectangle_list(self.options.keys())
+        r = 0
+        found = False
+        for i,rectangle in enumerate(rectangle_list):
+            if rectangle.is_point_in(Point(e.x,e.y),delta=2):
+                r=i
+                found = True
+        if found:
+            selected = list(self.options.keys())[r]
+            self.broadcast_lw_signal("select_color",selected,None)
+        return True
+    
+    def is_point_in(self, p:"Point"):
+#         print(p,self.total_width,self.total_height)
+        return p.x >= 0 and p.x <= self.total_width and\
+               p.y >= 0 and p.y <= self.total_height
 
     def on_draw(self,w,c):
         c.save()
+        c.select_font_face("sans-serif")
+        c.set_font_size(self.font_size)
+        c.set_line_width(1)
         lines = self.options.keys()
         maxH, maxW = self._get_text_max_size(c, lines)
         self.maxH = maxH
@@ -216,9 +240,6 @@ class Selector(lw.Widget):
         rectangle_size = self._get_rectangle_size()
         self._total_height = maxH
         self._total_width = self.padding * 2 + rectangle_size + maxW
-        c.select_font_face("sans-serif")
-        c.set_font_size(self.font_size)
-        c.set_line_width(1)
         line_color_rectangle = zip(self.options.items(),self._get_rectangle_list(self.options.keys()))
         for (line,color),rectangle in line_color_rectangle:
             c.rectangle(rectangle.start.x,
@@ -230,7 +251,7 @@ class Selector(lw.Widget):
             c.set_source_rgb(0,0,0)
             c.stroke()
             c.move_to(rectangle.start.x + rectangle.width + self.padding, 
-                      math.floor(rectangle.start.y + self.maxH * .85))
+                      math.floor(rectangle.start.y + rectangle.height * .9))
             c.show_text(line)
         c.restore()
     
