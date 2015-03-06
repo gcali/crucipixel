@@ -94,7 +94,7 @@ class Root(Gtk.DrawingArea):
 #             print("I existed!")
         except KeyError:
             self._lw_signals[signal_name] = []
-            return self.register_signal_for_child(widget, signal_name)
+            return self.register_signal_for_child(signal_name, widget)
 
     def broadcast_lw_signal(self,signal_name,*args): 
 #         print(self._lw_signals)

@@ -41,4 +41,8 @@ class Rectangle:
     
     def __str__(self):
         return "[{},w{},h{}]".format(self.start,self.width,self.height)
+    
+    def is_point_in(self,p:"Point",delta=0):
+        return p.x >= self.start.x+delta and p.x <= self.start.x + self.width+delta and\
+               p.y >= self.start.y+delta and p.y <= self.start.y + self.height+delta
         
