@@ -34,7 +34,12 @@ class DefaultDict(dict):
             super().__setitem__(key,value)
 
 def clamp(value:"num",min_v:"num",max_v:"num") -> "num":
-    return min(max_v, max(value,min_v))
+    if value < min_v:
+        return min_v
+    elif value > max_v:
+        return max_v
+    else:
+        return value
    
 if __name__ == '__main__':
     d = DefaultDict()

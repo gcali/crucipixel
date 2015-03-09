@@ -419,6 +419,32 @@ class Container(Widget):
             if child.is_point_in(p,category):
                 return True
         return False
+    
+    def is_clip_set(self):
+        if super().is_clip_set():
+            return True
+        if not self.list:
+            return False
+        for child in self.list:
+            if not child.is_clip_set():
+                return False
+        return True
+    
+    @property
+    def clip_rectangle(self):
+        if super().is_clip_set():
+            return super().clip_rectangle
+        else:
+            vertexes = []
+            for child in self.list:
+                if child.is_clip_set():
+                    child_vertexes = [Point(child.fromWidgetCoords.transform_point(p.x,p.y))\
+                                        for p in child.clip_rectangle.get_vertexes()]
+                    vertexes.extend(child_vertexes)
+            if not vertexes:
+                return super().clip_rectangle
+            else:
+                return Rectangle.from_points(vertexes)
 
                         
 

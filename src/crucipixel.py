@@ -265,12 +265,6 @@ class Crucipixel(lw.UncheckedContainer):
         super().__init__(*args,**kwargs)
         self.add(Grid(start=Point(80,80),cols=30,rows=30,width=15,height=15))
     
-#     def is_point_in(self, p:"Point",category=MouseEvent.UNKNOWN):
-#         #TODO Consider actual area
-#         if p.x >= 0 and p.y >= 0:
-#             return True
-#         else:
-#             return False
     
 
 if __name__ == '__main__':
