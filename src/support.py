@@ -17,6 +17,14 @@ def get_from_to_inclusive(a,b):
     yield b
 
 class DefaultDict(dict): 
+    
+    @property
+    def default(self):
+        return self._default_calculator()
+    @default.setter
+    def default(self,value):
+        self._default_calculator = value
+
     def __missing__(self,key):
         try:
             return self.default

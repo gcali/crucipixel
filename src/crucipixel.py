@@ -30,9 +30,12 @@ class Grid(lw.Widget):
         self.cell_height=height
         self.is_mouse_down = False
         
-        self.color_associations = {"left" : (0,0,0),
-                                   "right" : (1,1,1),
-                                   "middle" : (.8,.8,.8)}
+        self.input_color_associations = {"left" : "selected",
+                                         "right" : "empty",
+                                         "middle" : "default"}
+        self.function_color_associations = {"selected" : (0,0,0),
+                                            "empty" : (1,1,1),
+                                            "default" : (.8,.8,.8)}
         
         self.selection_style = Grid.SELECTION_RECTANGLE
 
@@ -41,14 +44,11 @@ class Grid(lw.Widget):
         self._selection_start = Point(0,0)
         self._selection_backup = []
         self._cell_color = DefaultDict()
-        self._cell_color.default = self.color_associations["middle"]
+        self._cell_color.default = lambda: self.function_color_associations["default"]
         self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+.5,self._total_width+.5)
 
-        def handle_hi():
-            print("Hi! I've been called by a signal!")
         def handle_select_color(name,value):
             print(name,value)
-#         self.register_signal("hi", handle_hi)
         self.register_signal("select_color",handle_select_color)
     
     @property
@@ -97,14 +97,13 @@ class Grid(lw.Widget):
         
 #     
     def on_mouse_down(self, w, e):
-#         print("I've been called! On mouse down")
-#         self.broadcast_lw_signal("hi")
         if self.is_point_in(Point(e.x,e.y)):
             self.is_mouse_down = True
             cell_col,cell_row = self._get_cell_id(e)
             self._selection_start = Point(cell_col,cell_row)
             try:
-                self._selected_color = self.color_associations[e.button]
+                self._selected_color = self.function_color_associations[\
+                                            self.input_color_associations[e.button]]
             except KeyError:
                 pass
             self._cell_color[(cell_col,cell_row)] = self._selected_color
