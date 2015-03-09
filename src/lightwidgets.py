@@ -27,6 +27,10 @@ def _transform_event(event_type,e,w):
     return new_e
 
 class MouseEvent:
+    UNKNOWN =      0
+    MOUSE_DOWN =   1
+    MOUSE_UP =     2
+    MOUSE_MOVE =   3
     
     def __init__(self, event_type, x, y, button=None):
         self.x = x
@@ -180,6 +184,8 @@ class Widget:
     
     @property
     def clip_rectangle(self):
+        if not self.is_clip_set():
+            raise AttributeError("Clip rectangle not set")
         return Rectangle(self._clip_start,self._clip_width,self._clip_height)
     @clip_rectangle.setter
     def clip_rectangle(self,value):
@@ -198,7 +204,7 @@ class Widget:
     def on_draw(self,w,c):
         pass
     
-    def on_mouse_move(self,w,e):
+    def on_mouse_move(self,widget,event):
         return False
     
     def on_mouse_down(self,w,e):
@@ -207,8 +213,13 @@ class Widget:
     def on_mouse_up(self,w,e):
         return False
     
-    def is_point_in(self,p:"Point"):
-        return False
+    def is_point_in(self,p:"Point",category=MouseEvent.UNKNOWN):
+        if category == MouseEvent.MOUSE_UP:
+            return True
+        elif not self.is_clip_set():
+            return False
+        else:
+            return self.clip_rectangle.is_point_in(p)
     
     def invalidate(self):
         self.father.invalidate()
@@ -304,7 +315,7 @@ class Donut(Widget):
         self.translate(value.x,value.y)
         #self.translate(deltaX,deltaY)
     
-    def is_point_in(self, p:"Point"):
+    def is_point_in(self, p:"Point",*args,**kwargs):
         isInExtern = (sqrt(p.x*p.x + p.y*p.y) <= self.outer)
         isInIntern = (sqrt(p.x*p.x + p.y*p.y) <= self.inner)
         return isInExtern and not isInIntern
@@ -348,43 +359,66 @@ class Container(Widget):
     def remove_id(self,id_v:"id"):
         raise NotImplementedError()
     
-    def on_draw(self,w,c):
+    def on_draw(self,widget,context):
         for child in self.list:
-            c.save()
-            c.transform(child.fromWidgetCoords)
-            child.on_draw(self,c)
-            c.restore()
+            context.save()
+            context.transform(child.fromWidgetCoords)
+            if child.is_clip_set():
+                rectangle = child.clip_rectangle
+                context.rectangle(rectangle.start.x,rectangle.start.y,
+                                  rectangle.width,rectangle.height)
+                context.clip() 
+            child.on_draw(self,context)
+            context.restore()
     
-    def _handle_event(self,w,e,f,force=False):
+    def _handle_event(self,widget,event,callback,category):
         for child in reversed(list(self.list)):
-            p = Point(child.toWidgetCoords.transform_point(e.x,e.y))
-            if child.is_point_in(p) or force:
-                local_event = e.__copy__()
-                local_event.x = p.x
-                local_event.y = p.y
-                if (f(child))(self,local_event):
-                    return True
+#             if child.ID == "Crucipixel Container":
+#                 print("I'm the child!")
+            p = Point(child.toWidgetCoords.transform_point(event.x,event.y))
+#             if self.ID == "Crucipixel Container":
+#                 print(child,p)
+            
+            try:
+                if child.is_point_in(p,category):
+    #                 if child.ID == "Crucipixel Container":
+    #                     print("As a child, I was in!")
+    #                 print("I was in!")
+                    local_event = event.__copy__()
+                    local_event.x = p.x
+                    local_event.y = p.y
+                    if (callback(child))(self,local_event):
+                        return True
+            except TypeError:
+                print(child)
+                return True
         return False
     
     def on_mouse_down(self, w, e):
         def take_on_mouse_down(w):
             return w.on_mouse_down
-        return self._handle_event(w,e,take_on_mouse_down)
+        return self._handle_event(w,e,take_on_mouse_down,MouseEvent.MOUSE_DOWN)
     
     def on_mouse_up(self, w, e):
         def take_on_mouse_up(w):
             return w.on_mouse_up
-        return self._handle_event(w,e,take_on_mouse_up,True)
+        return self._handle_event(w,e,take_on_mouse_up,MouseEvent.MOUSE_UP)
 
     def on_mouse_move(self, w, e):
         def take_on_mouse_move(w):
             return w.on_mouse_move
-        return self._handle_event(w,e,take_on_mouse_move)
+        return self._handle_event(w,e,take_on_mouse_move,MouseEvent.MOUSE_MOVE)
     
     def register_signal_for_child(self, signal_name:"str", widget:"Widget"):
         def handle_child(*args):
             return widget.handle_signal(signal_name,*args)
         self.register_signal(signal_name, handle_child)
+    
+    def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
+        for child in self.list:
+            if child.is_point_in(p,category):
+                return True
+        return False
 
                         
 

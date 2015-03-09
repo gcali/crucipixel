@@ -8,8 +8,9 @@ import math
 from gi.repository import Gtk,Gdk
 from geometry import Point, Rectangle
 import lightwidgets as lw
-from support import get_from_to_inclusive, DefaultDict
+from support import get_from_to_inclusive, DefaultDict, clamp
 from collections import OrderedDict
+from lightwidgets import MouseEvent
 
 class Grid(lw.Widget):
     
@@ -41,14 +42,13 @@ class Grid(lw.Widget):
         self._selection_backup = []
         self._cell_color = DefaultDict()
         self._cell_color.default = self.color_associations["middle"]
-        self.clip_rectangle = Rectangle(Point(0,0),self._total_height,self._total_width)
-        #print(self.clip_rectangle)
+        self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+.5,self._total_width+.5)
 
         def handle_hi():
             print("Hi! I've been called by a signal!")
         def handle_select_color(name,value):
             print(name,value)
-        self.register_signal("hi", handle_hi)
+#         self.register_signal("hi", handle_hi)
         self.register_signal("select_color",handle_select_color)
     
     @property
@@ -59,36 +59,36 @@ class Grid(lw.Widget):
     def _total_width(self):
         return self.cols * self.cell_width
     
-    def on_draw(self,w,c):
-        c.save()
-        c.set_line_width(1)
-        c.set_source_rgb(0,0,0)
+    def on_draw(self,widget,context):
+        context.save()
+        context.set_line_width(1)
+        context.set_source_rgb(0,0,0)
         width = self._total_width
         height= self._total_height
         for x in range(0,width+self.cell_width,self.cell_width):
-            c.move_to(x,0)
-            c.line_to(x,height)
-            c.stroke() 
+            context.move_to(x,0)
+            context.line_to(x,height)
+            context.stroke() 
 
         for y in range(0,height+self.cell_height,self.cell_height):
-            c.move_to(0,y)
-            c.line_to(width,y)
-            c.stroke()
+            context.move_to(0,y)
+            context.line_to(width,y)
+            context.stroke()
         
-        c.move_to(0,0)
-        c.line_to(-10,-10)
-        c.stroke()
+        context.move_to(0,0)
+        context.line_to(-10,-10)
+        context.stroke()
             
         for (k,v) in self._cell_color.items():
-            c.set_source_rgb(*v)
-            c.rectangle(k[0] * self.cell_width + 2,
+            context.set_source_rgb(*v)
+            context.rectangle(k[0] * self.cell_width + 2,
                         k[1] * self.cell_height + 2,
                         self.cell_width - 4,
                         self.cell_height - 4)
-            c.fill()
+            context.fill()
                         
 
-        c.restore()
+        context.restore()
     
     def _get_cell_id(self,pos:"Point") -> "(col,row)":
             cell_col = int(pos.x // self.cell_width)
@@ -97,7 +97,8 @@ class Grid(lw.Widget):
         
 #     
     def on_mouse_down(self, w, e):
-        self.broadcast_lw_signal("hi")
+#         print("I've been called! On mouse down")
+#         self.broadcast_lw_signal("hi")
         if self.is_point_in(Point(e.x,e.y)):
             self.is_mouse_down = True
             cell_col,cell_row = self._get_cell_id(e)
@@ -120,14 +121,17 @@ class Grid(lw.Widget):
     def _select_rectangle(self, cell_col_end, cell_row_end):
         for c in get_from_to_inclusive(self._selection_start.col, cell_col_end):
             for r in get_from_to_inclusive(self._selection_start.row, cell_row_end):
-#                 self._selection_backup.append((c, r, self._cell_color.get((c, r), (.8, .8, .8))))
                 self._selection_backup.append((c, r, self._cell_color[c, r]))
                 self._cell_color[c, r] = self._selected_color
 
     def on_mouse_move(self, w, e):
-        if self.is_mouse_down and self.is_point_in(Point(e.x,e.y)):
+        if self.is_mouse_down:
+            x = clamp(e.x,0,self._total_width)
+            y = clamp(e.y,0,self._total_height)
+            print("Point:",Point(x,y))
+            print("Old point:",Point(e.x,e.y))
             #TODO Clamp e.x,e.y in width and height
-            cell_col,cell_row = self._get_cell_id(e)
+            cell_col,cell_row = self._get_cell_id(Point(x,y))
             if self.selection_style == Grid.SELECTION_FREE:
                 self._cell_color[cell_col,cell_row] = self._selected_color
             elif self.selection_style == Grid.SELECTION_LINE:
@@ -142,9 +146,7 @@ class Grid(lw.Widget):
                 self._select_rectangle(cell_col, cell_row)
                     
             self.invalidate()
-            return True
-        else:
-            return False
+        return False
     
     def on_mouse_up(self, w, e):
         if self.is_mouse_down:
@@ -152,9 +154,11 @@ class Grid(lw.Widget):
             self._selection_backup = []
         return False
     
-    def is_point_in(self, p:"Point"):
-        return (p.x >= 0 and p.x <= self.cols * self.cell_width) and\
-               (p.y >= 0 and p.y <= self.rows * self.cell_height)
+    def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
+        if category == MouseEvent.MOUSE_MOVE and self.is_mouse_down:
+            return True
+        else:
+            return super().is_point_in(p,category)
 
 class Selector(lw.Widget):
     
@@ -223,18 +227,18 @@ class Selector(lw.Widget):
             self.broadcast_lw_signal("select_color",selected,None)
         return True
     
-    def is_point_in(self, p:"Point"):
+    def is_point_in(self, p:"Point",category=MouseEvent.UNKNOWN):
 #         print(p,self.total_width,self.total_height)
         return p.x >= 0 and p.x <= self.total_width and\
                p.y >= 0 and p.y <= self.total_height
 
-    def on_draw(self,w,c):
-        c.save()
-        c.select_font_face("sans-serif")
-        c.set_font_size(self.font_size)
-        c.set_line_width(1)
+    def on_draw(self,widget,context):
+        context.save()
+        context.select_font_face("sans-serif")
+        context.set_font_size(self.font_size)
+        context.set_line_width(1)
         lines = self.options.keys()
-        maxH, maxW = self._get_text_max_size(c, lines)
+        maxH, maxW = self._get_text_max_size(context, lines)
         self.maxH = maxH
         self.maxW = maxW
         rectangle_size = self._get_rectangle_size()
@@ -242,18 +246,31 @@ class Selector(lw.Widget):
         self._total_width = self.padding * 2 + rectangle_size + maxW
         line_color_rectangle = zip(self.options.items(),self._get_rectangle_list(self.options.keys()))
         for (line,color),rectangle in line_color_rectangle:
-            c.rectangle(rectangle.start.x,
+            context.rectangle(rectangle.start.x,
                         rectangle.start.y,
                         rectangle.width,
                         rectangle.height)
-            c.set_source_rgb(*color)
-            c.fill_preserve()
-            c.set_source_rgb(0,0,0)
-            c.stroke()
-            c.move_to(rectangle.start.x + rectangle.width + self.padding, 
+            context.set_source_rgb(*color)
+            context.fill_preserve()
+            context.set_source_rgb(0,0,0)
+            context.stroke()
+            context.move_to(rectangle.start.x + rectangle.width + self.padding, 
                       math.floor(rectangle.start.y + rectangle.height * .9))
-            c.show_text(line)
-        c.restore()
+            context.show_text(line)
+        context.restore()
+
+class Crucipixel(lw.UncheckedContainer):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args,**kwargs)
+        self.add(Grid(start=Point(80,80),cols=30,rows=30,width=15,height=15))
+    
+#     def is_point_in(self, p:"Point",category=MouseEvent.UNKNOWN):
+#         #TODO Consider actual area
+#         if p.x >= 0 and p.y >= 0:
+#             return True
+#         else:
+#             return False
     
 
 if __name__ == '__main__':
@@ -262,7 +279,9 @@ if __name__ == '__main__':
     root = lw.Root(500,500)
     simple_container = lw.UncheckedContainer()
     simple_container.ID = "SimpleContainer"
-    cruci = Grid(start=Point(80,80),cols=30,rows=30,width=20,height=20)
+#     cruci = Grid(start=Point(80,80),cols=30,rows=30,width=20,height=20)
+    cruci = Crucipixel()
+    cruci.ID="Crucipixel Container"
     selector = Selector()
     simple_container.add(selector)
     simple_container.add(cruci)

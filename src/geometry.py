@@ -34,6 +34,19 @@ class Point:
 
 class Rectangle:
     
+    @staticmethod
+    def from_points(point_iter:"iterable of Point") -> "Rectangle":
+        minX = float("inf")
+        minY = float("inf")
+        maxX = float("-inf")
+        maxY = float("-inf")
+        for p in point_iter:
+            minX = min(p.x,minX)
+            minY = min(p.y,minY)
+            maxX = max(p.x,maxX)
+            maxY = max(p.y,maxY)
+        return Rectangle(Point(minX,minY),maxX-minX,maxY-minY)
+    
     def __init__(self,start:"Point",width:"num",height:"num"):
         self.start = start
         self.width = width
@@ -45,4 +58,11 @@ class Rectangle:
     def is_point_in(self,p:"Point",delta=0):
         return p.x >= self.start.x+delta and p.x <= self.start.x + self.width+delta and\
                p.y >= self.start.y+delta and p.y <= self.start.y + self.height+delta
+    
+    def get_vertexes(self):
+        return [self.start,
+                Point(self.start.x + self.width,self.start.y),
+                Point(self.start.x,self.start.y + self.height),
+                Point(self.start.x + self.width,self.start.y + self.height)
+                ]
         
