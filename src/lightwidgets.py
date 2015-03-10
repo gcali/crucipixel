@@ -462,6 +462,7 @@ class UncheckedContainer(Container):
     def add(self,widget):
         self._widget_list.append((widget,widget))
         widget.father = self
+        return widget
     
     def remove_id(self, id_v:"id"):
         index = None

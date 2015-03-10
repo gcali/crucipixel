@@ -11,6 +11,7 @@ import lightwidgets as lw
 from support import get_from_to_inclusive, DefaultDict, clamp
 from collections import OrderedDict
 from lightwidgets import MouseEvent
+import cairo
 
 class Grid(lw.Widget):
     
@@ -33,7 +34,7 @@ class Grid(lw.Widget):
         self.input_color_associations = {"left" : "selected",
                                          "right" : "empty",
                                          "middle" : "default"}
-        self.function_color_associations = {"selected" : (0,0,0),
+        self.function_color_associations = {"selected" : (0.3,0.3,0.3),
                                             "empty" : (1,1,1),
                                             "default" : (.8,.8,.8)}
         
@@ -45,9 +46,10 @@ class Grid(lw.Widget):
         self._selection_backup = []
         self._cell_color = DefaultDict()
         self._cell_color.default = lambda: self.function_color_associations["default"]
-        self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+.5,self._total_width+.5)
+        self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+1,self._total_width+1)
 
         def handle_select_color(name,value):
+            self.input_color_associations[name] = value
             print(name,value)
         self.register_signal("select_color",handle_select_color)
     
@@ -62,31 +64,44 @@ class Grid(lw.Widget):
     def on_draw(self,widget,context):
         context.save()
         context.set_line_width(1)
-        context.set_source_rgb(0,0,0)
         width = self._total_width
         height= self._total_height
+
+        for (k,v) in self._cell_color.items():
+            context.set_source_rgb(*v)
+            context.rectangle(k[0] * self.cell_width,
+                        k[1] * self.cell_height,
+                        self.cell_width,
+                        self.cell_height)
+            context.fill()
+                        
+        context.set_source_rgb(0,0,0)
+        i=0
         for x in range(0,width+self.cell_width,self.cell_width):
+            if i % 5 == 0:
+                context.set_line_width(2)
+            else:
+                context.set_line_width(1)
             context.move_to(x,0)
             context.line_to(x,height)
             context.stroke() 
+            i+=1
 
+        i=0
         for y in range(0,height+self.cell_height,self.cell_height):
+            if i % 5 == 0:
+                context.set_line_width(2)
+            else:
+                context.set_line_width(1)
             context.move_to(0,y)
             context.line_to(width,y)
             context.stroke()
+            i+=1
         
         context.move_to(0,0)
         context.line_to(-10,-10)
         context.stroke()
             
-        for (k,v) in self._cell_color.items():
-            context.set_source_rgb(*v)
-            context.rectangle(k[0] * self.cell_width + 2,
-                        k[1] * self.cell_height + 2,
-                        self.cell_width - 4,
-                        self.cell_height - 4)
-            context.fill()
-                        
 
         context.restore()
     
@@ -127,9 +142,6 @@ class Grid(lw.Widget):
         if self.is_mouse_down:
             x = clamp(e.x,0,self._total_width)
             y = clamp(e.y,0,self._total_height)
-            print("Point:",Point(x,y))
-            print("Old point:",Point(e.x,e.y))
-            #TODO Clamp e.x,e.y in width and height
             cell_col,cell_row = self._get_cell_id(Point(x,y))
             if self.selection_style == Grid.SELECTION_FREE:
                 self._cell_color[cell_col,cell_row] = self._selected_color
@@ -207,13 +219,15 @@ class Selector(lw.Widget):
         
         maxW, maxH = 0, 0
         for s in sizes:
-#             print(s)
             maxW = max(maxW, s.width - s.start.x)
             maxH = max(maxH, s.height - s.start.y)
         
         return maxH, maxW
     
     def on_mouse_down(self, w, e):
+        new_colors = { "left" : "empty",
+                       "right" : "selected",
+                       "middle" : "default"}
         rectangle_list = self._get_rectangle_list(self.options.keys())
         r = 0
         found = False
@@ -221,13 +235,15 @@ class Selector(lw.Widget):
             if rectangle.is_point_in(Point(e.x,e.y),delta=2):
                 r=i
                 found = True
+                break
         if found:
-            selected = list(self.options.keys())[r]
-            self.broadcast_lw_signal("select_color",selected,None)
-        return True
+            selected = (list(self.options.keys())[r]).lower()
+            self.broadcast_lw_signal("select_color",selected,new_colors[selected])
+            return True
+        else:
+            return False
     
     def is_point_in(self, p:"Point",category=MouseEvent.UNKNOWN):
-#         print(p,self.total_width,self.total_height)
         return p.x >= 0 and p.x <= self.total_width and\
                p.y >= 0 and p.y <= self.total_height
 
@@ -258,27 +274,109 @@ class Selector(lw.Widget):
             context.show_text(line)
         context.restore()
 
+class Guides(lw.Widget): 
+    VERTICAL = 0
+    HORIZONTAL = 1
+    def __init__(self, elements:"num iterable", 
+                 start:"Point", size:"num", orientation=HORIZONTAL): 
+        super().__init__()
+        self.translate(start.x +.5, start.y+.5)
+        self.orientation = orientation
+        self.elements = [ list(e) for e in elements ]
+        self.size = size
+        self.height = 50
+        if self.orientation == Guides.HORIZONTAL:
+            self.clip_rectangle = Rectangle(Point(0,0),self.size * len(self.elements),-self.height)
+        else:
+            self.clip_rectangle = Rectangle(Point(0,0),-self.height,self.size * len(self.elements))
+        
+    def _line_coordinates(self,line_index):
+        if self.orientation == Guides.HORIZONTAL:
+            delta_x = line_index * self.size
+            delta_y = -self.height
+            return [Point(delta_x,0),Point(delta_x,delta_y)]
+        elif self.orientation == Guides.VERTICAL:
+            delta_x = -self.height
+            delta_y = line_index * self.size
+            return [Point(0,delta_y),Point(delta_x,delta_y)]
+        else:
+            raise ValueError("Invalid orientation: {}".format(str(self.orientation)))
+    
+    def on_draw(self, widget, context):
+        def draw_line(line):
+            context.move_to(line[0].x,line[0].y)
+            context.line_to(line[1].x,line[1].y)
+            context.stroke()
+        context.save()
+        for (i,e) in enumerate(self.elements):
+            if i % 5 == 0:
+                context.set_line_width(2)
+            else:
+                context.set_line_width(1)
+            line = self._line_coordinates(i)
+            draw_line(line)
+        context.set_line_width(2)
+        draw_line(self._line_coordinates(i+1))
+        context.restore()
+
 class Crucipixel(lw.UncheckedContainer):
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, start=Point(0,0), *args, **kwargs):
         super().__init__(*args,**kwargs)
-        self.add(Grid(start=Point(80,80),cols=30,rows=30,width=15,height=15))
+        self.translate(start.x,start.y)
+        self.size = 15
+        self.add(Grid(start=Point(0,0),cols=30,rows=30,width=self.size,height=self.size)) 
+        self.add(Guides(start=Point(0,0),elements=[[i] for i in range(30)],size=self.size))
+        self.add(Guides(start=Point(0,0),elements=[[i] for i in range(30)],size=self.size,orientation=Guides.VERTICAL))
+
+class MainArea(lw.UncheckedContainer):
     
+    def __init__(self):
+        super().__init__()
+        self.ID = "MainArea"
+        self.crucipixel = Crucipixel(start=Point(120,100))
+        self.crucipixel.ID = "Crucipixel"
+        self.selector = Selector()
+        self.add(self.crucipixel)
+        self.add(self.selector)
+        self._mouse_down = False
+        self._click_point = Point(0,0)
     
+    def on_mouse_down(self, w, e):
+        handled = super().on_mouse_down(w, e)
+        if not handled:
+            print("I wasn't handled!")
+            self._mouse_down = True
+            self._click_point = Point(e.x,e.y)
+    
+    def on_mouse_move(self, w, e):
+        if self._mouse_down:
+            print("I'm moving!")
+            delta_x = int(e.x - self._click_point.x)
+            delta_y = int(e.y - self._click_point.y)
+            self._click_point = Point(e.x,e.y)
+            self.crucipixel.translate(delta_x,delta_y)
+            self.invalidate()
+        super().on_mouse_move(w,e)
+    
+    def on_mouse_up(self,w,e):
+        if self._mouse_down:
+            self._mouse_down = False
+        super().on_mouse_up(w,e)
 
 if __name__ == '__main__':
     win = lw.MainWindow(title="Crucipixel Dev")
     win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.8,.8,.8,1))
     root = lw.Root(500,500)
-    simple_container = lw.UncheckedContainer()
-    simple_container.ID = "SimpleContainer"
-#     cruci = Grid(start=Point(80,80),cols=30,rows=30,width=20,height=20)
-    cruci = Crucipixel()
-    cruci.ID="Crucipixel Container"
-    selector = Selector()
-    simple_container.add(selector)
-    simple_container.add(cruci)
-    root.set_child(simple_container)
+#     simple_container = lw.UncheckedContainer()
+#     simple_container.ID = "SimpleContainer"
+#     cruci = Crucipixel(start=Point(120,100))
+#     cruci.ID="Crucipixel Container"
+#     selector = Selector()
+#     simple_container.add(selector)
+#     simple_container.add(cruci)
+#     root.set_child(simple_container)
+    root.set_child(MainArea())
 
     win.add(root)
     win.start_main()
