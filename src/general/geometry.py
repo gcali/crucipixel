@@ -56,8 +56,15 @@ class Rectangle:
         return "[{},w{},h{}]".format(self.start,self.width,self.height)
     
     def is_point_in(self,p:"Point",delta=0):
-        return p.x >= self.start.x+delta and p.x <= self.start.x + self.width+delta and\
-               p.y >= self.start.y+delta and p.y <= self.start.y + self.height+delta
+        if self.width >= 0:
+            x_ok = (p.x >= self.start.x-delta and p.x <= self.start.x + self.width+delta)
+        else:
+            x_ok = (p.x <= self.start.x+delta and p.x >= self.start.x + self.width-delta)
+        if self.height >= 0:
+            y_ok = (p.y >= self.start.y-delta and p.y <= self.start.y + self.height+delta)
+        else:
+            y_ok = (p.y <= self.start.y+delta and p.y >= self.start.y + self.height-delta)
+        return x_ok and y_ok
     
     def get_vertexes(self):
         return [self.start,

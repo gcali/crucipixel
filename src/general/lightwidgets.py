@@ -8,9 +8,8 @@ from gi.repository import Gtk
 from gi.repository.Gdk import EventMask
 import cairo
 from math import pi,sqrt
-from geometry import Point, Rectangle
+from general.geometry import Point, Rectangle
 from _operator import pos
-from sys import stderr
 
 def _transform_event(event_type,e,w):
     x,y=w.toWidgetCoords.transform_point(e.x,e.y)
@@ -373,24 +372,15 @@ class Container(Widget):
     
     def _handle_event(self,widget,event,callback,category):
         for child in reversed(list(self.list)):
-#             if child.ID == "Crucipixel Container":
-#                 print("I'm the child!")
             p = Point(child.toWidgetCoords.transform_point(event.x,event.y))
-#             if self.ID == "Crucipixel Container":
-#                 print(child,p)
-            
             try:
                 if child.is_point_in(p,category):
-    #                 if child.ID == "Crucipixel Container":
-    #                     print("As a child, I was in!")
-    #                 print("I was in!")
                     local_event = event.__copy__()
                     local_event.x = p.x
                     local_event.y = p.y
                     if (callback(child))(self,local_event):
                         return True
             except TypeError:
-                print(child)
                 return True
         return False
     
@@ -456,7 +446,7 @@ class UncheckedContainer(Container):
     
     @property
     def list(self):
-        for (i,w) in self._widget_list:
+        for (_,w) in self._widget_list:
             yield w
     
     def add(self,widget):
@@ -466,7 +456,7 @@ class UncheckedContainer(Container):
     
     def remove_id(self, id_v:"id"):
         index = None
-        for (pos,(i,w)) in enumerate(self._widget_list):
+        for (pos,(i,_)) in enumerate(self._widget_list):
             if i == id_v:
                 index = pos
                 break
@@ -476,7 +466,7 @@ class UncheckedContainer(Container):
     
     def remove_obj(self, widget):
         index = None
-        for (pos,(i,w)) in enumerate(self._widget_list):
+        for (pos,(_,w)) in enumerate(self._widget_list):
             if w == widget:
                 index = pos
                 break

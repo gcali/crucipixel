@@ -6,12 +6,11 @@ Created on Feb 22, 2015
 
 import math
 from gi.repository import Gtk,Gdk
-from geometry import Point, Rectangle
-import lightwidgets as lw
+from general.geometry import Point, Rectangle
+import general.lightwidgets as lw
 from support import get_from_to_inclusive, DefaultDict, clamp
 from collections import OrderedDict
-from lightwidgets import MouseEvent
-import cairo
+from general.lightwidgets import MouseEvent
 
 class Grid(lw.Widget):
     
@@ -249,7 +248,7 @@ class Selector(lw.Widget):
 
     def on_draw(self,widget,context):
         context.save()
-        context.select_font_face("sans-serif")
+#         context.select_font_face("sans-serif")
         context.set_font_size(self.font_size)
         context.set_line_width(1)
         lines = self.options.keys()
@@ -274,6 +273,14 @@ class Selector(lw.Widget):
             context.show_text(line)
         context.restore()
 
+class GuideCell:
+    
+    def __init__(self, coordinates:"(line,pos)",
+                 cell:"Rectangle", text:"str"):
+        self.cell = cell
+        self.coordinates = coordinates
+        self.text = text
+
 class Guides(lw.Widget): 
     VERTICAL = 0
     HORIZONTAL = 1
@@ -285,19 +292,76 @@ class Guides(lw.Widget):
         self.elements = [ list(e) for e in elements ]
         self.size = size
         self.height = 50
+        self._number_height = None
+        self._number_width = None
+        self._cell_list_to_update = True
+        self._cell_list = []
         if self.orientation == Guides.HORIZONTAL:
             self.clip_rectangle = Rectangle(Point(0,0),self.size * len(self.elements),-self.height)
         else:
             self.clip_rectangle = Rectangle(Point(0,0),-self.height,self.size * len(self.elements))
+        print(self.clip_rectangle)
+    
+    def _update_cell_list(self):
+        """Should be called only after on_draw has been called at least once"""
+        self._cell_list = []
+        for (line_index,number_list) in enumerate(self.elements): 
+            line = self._line_coordinates(line_index)
+            if self.orientation == Guides.HORIZONTAL:
+                next_x = line[0].x - 3
+                next_y = line[0].y - 5
+            elif self.orientation == Guides.VERTICAL:
+                next_x = line[0].x
+                next_y = line[0].y - 5
+            for (element_index, number) in enumerate(number_list):
+                text = str(number)
+                coordinates = (line_index,element_index)
+                if self.orientation == Guides.HORIZONTAL:
+                    width = self._number_width * len(text)
+                    height = self._number_height + 5
+                    rectangle = Rectangle(Point(next_x-width,next_y),
+                                          width,
+                                          -height)
+                    next_y = next_y - height
+                elif self.orientation == Guides.VERTICAL:
+                    width = self._number_width * len(text) + 3
+                    height = self._number_height
+                    rectangle = Rectangle(Point(next_x - width,next_y),
+                                          width,
+                                          -height)
+                    next_x -= width
+                self._cell_list.append(GuideCell(coordinates=coordinates,
+                                                cell=rectangle,
+                                                text=text)
+                                      ) 
         
+    def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
+        value= super().is_point_in(p,category)
+#         if category == MouseEvent.MOUSE_DOWN:
+#             print("ID:",self.ID)
+#             print(self.clip_rectangle,p,self.clip_rectangle.is_point_in(p))
+#             print("Mouse down:",value)
+        return value
+    
+    def on_mouse_down(self, w, e):
+        p = Point(e.x,e.y)
+        print("Point:",p)
+        for e in self._cell_list:
+            if e.cell.start.x == 71:
+                print(e.cell)
+                print(p)
+                print(e.cell.is_point_in(p))
+            if e.cell.is_point_in(p):
+                return True
+
     def _line_coordinates(self,line_index):
         if self.orientation == Guides.HORIZONTAL:
-            delta_x = line_index * self.size
+            delta_x = (line_index + 1) * self.size
             delta_y = -self.height
             return [Point(delta_x,0),Point(delta_x,delta_y)]
         elif self.orientation == Guides.VERTICAL:
             delta_x = -self.height
-            delta_y = line_index * self.size
+            delta_y = (line_index +1) * self.size
             return [Point(0,delta_y),Point(delta_x,delta_y)]
         else:
             raise ValueError("Invalid orientation: {}".format(str(self.orientation)))
@@ -308,12 +372,24 @@ class Guides(lw.Widget):
             context.line_to(line[1].x,line[1].y)
             context.stroke()
         context.save()
+        
+        ext = context.text_extents("0")
+        self._number_width = int(ext[0] + ext[2])
+        self._number_height = -int(ext[1]) 
+        if self._cell_list_to_update:
+            self._update_cell_list()
+        
+        for e in self._cell_list:
+            context.move_to(e.cell.start.x,
+                            e.cell.start.y)
+            context.show_text(e.text)
+
         for (i,e) in enumerate(self.elements):
-            if i % 5 == 0:
+            line = self._line_coordinates(i)
+            if (i+1) % 5 == 0:
                 context.set_line_width(2)
             else:
                 context.set_line_width(1)
-            line = self._line_coordinates(i)
             draw_line(line)
         context.set_line_width(2)
         draw_line(self._line_coordinates(i+1))
@@ -321,20 +397,26 @@ class Guides(lw.Widget):
 
 class Crucipixel(lw.UncheckedContainer):
     
-    def __init__(self, start=Point(0,0), *args, **kwargs):
+    def __init__(self, start=Point(0,0), cell_size=15, *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.translate(start.x,start.y)
-        self.size = 15
+        self.size = cell_size
         self.add(Grid(start=Point(0,0),cols=30,rows=30,width=self.size,height=self.size)) 
-        self.add(Guides(start=Point(0,0),elements=[[i] for i in range(30)],size=self.size))
-        self.add(Guides(start=Point(0,0),elements=[[i] for i in range(30)],size=self.size,orientation=Guides.VERTICAL))
+        elements=[[i] for i in range(30)]
+        elements[1]=[100,12,15]
+        g=Guides(start=Point(0,0),elements=elements,size=self.size,orientation=Guides.HORIZONTAL)
+        g.ID="Horizontal Guide"
+        self.add(g)
+        g=Guides(start=Point(0,0),elements=elements,size=self.size,orientation=Guides.VERTICAL)
+        g.ID="Vertical Guide"
+        self.add(g)
 
 class MainArea(lw.UncheckedContainer):
     
     def __init__(self):
         super().__init__()
         self.ID = "MainArea"
-        self.crucipixel = Crucipixel(start=Point(120,100))
+        self.crucipixel = Crucipixel(start=Point(120,100),cell_size=20)
         self.crucipixel.ID = "Crucipixel"
         self.selector = Selector()
         self.add(self.crucipixel)
@@ -345,17 +427,16 @@ class MainArea(lw.UncheckedContainer):
     def on_mouse_down(self, w, e):
         handled = super().on_mouse_down(w, e)
         if not handled:
-            print("I wasn't handled!")
             self._mouse_down = True
             self._click_point = Point(e.x,e.y)
+            self._translate_vector = Point(self.crucipixel.fromWidgetCoords.transform_point(0,0))
     
     def on_mouse_move(self, w, e):
         if self._mouse_down:
-            print("I'm moving!")
             delta_x = int(e.x - self._click_point.x)
             delta_y = int(e.y - self._click_point.y)
-            self._click_point = Point(e.x,e.y)
-            self.crucipixel.translate(delta_x,delta_y)
+            self.crucipixel.set_translate(self._translate_vector.x + delta_x,
+                                          self._translate_vector.y + delta_y)
             self.invalidate()
         super().on_mouse_move(w,e)
     
@@ -368,14 +449,6 @@ if __name__ == '__main__':
     win = lw.MainWindow(title="Crucipixel Dev")
     win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.8,.8,.8,1))
     root = lw.Root(500,500)
-#     simple_container = lw.UncheckedContainer()
-#     simple_container.ID = "SimpleContainer"
-#     cruci = Crucipixel(start=Point(120,100))
-#     cruci.ID="Crucipixel Container"
-#     selector = Selector()
-#     simple_container.add(selector)
-#     simple_container.add(cruci)
-#     root.set_child(simple_container)
     root.set_child(MainArea())
 
     win.add(root)
