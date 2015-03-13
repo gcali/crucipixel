@@ -11,20 +11,23 @@ import general.lightwidgets as lw
 from general.support import get_from_to_inclusive, DefaultDict, clamp
 from collections import OrderedDict
 from general.lightwidgets import MouseEvent
+from crucipixel import core
 
-class Grid(lw.Widget):
+class CrucipixelGrid(lw.Widget):
     
     SELECTION_FREE = 0
     SELECTION_LINE = 1
     SELECTION_RECTANGLE = 2
     @classmethod
-    def from_crucipixel(cls,crucipixel,start=Point(0,0),
-                        width=10,height=10):
+    def from_crucipixel(cls,
+                        crucipixel,
+                        cell_size,
+                        start=Point(0,0)):
         return cls(cols=crucipixel.cols,
                    rows=crucipixel.rows,
                    start=start,
-                   width=width,
-                   height=height,
+                   width=cell_size,
+                   height=cell_size,
                    crucipixel=crucipixel)
 
     def __init__(self,cols=10,rows=10,
@@ -42,16 +45,16 @@ class Grid(lw.Widget):
         self.is_mouse_down = False
         
         self.input_function_map = {"left" : "selected",
-                                         "right" : "empty",
-                                         "middle" : "default"}
+                                   "right" : "empty",
+                                   "middle" : "default"}
         self.function_color_map = {"selected" : (0.3,0.3,0.3),
-                                            "empty" : (1,1,1),
-                                            "default" : (.8,.8,.8)}
-        self.input_selection_style_map = {"1" : Grid.SELECTION_FREE,
-                                          "2" : Grid.SELECTION_LINE,
-                                          "3" : Grid.SELECTION_RECTANGLE}
+                                   "empty" : (1,1,1),
+                                   "default" : (.8,.8,.8)}
+        self.input_selection_style_map = {"1" : CrucipixelGrid.SELECTION_FREE,
+                                          "2" : CrucipixelGrid.SELECTION_LINE,
+                                          "3" : CrucipixelGrid.SELECTION_RECTANGLE}
         
-        self.selection_style = Grid.SELECTION_RECTANGLE
+        self.selection_style = CrucipixelGrid.SELECTION_RECTANGLE
 
         self.set_translate(start.x+.5,start.y+.5)
         self._selected_color_property = (0,0,0)
@@ -60,7 +63,7 @@ class Grid(lw.Widget):
         self._selection_memo = []
         self._cell_color = DefaultDict()
         self._cell_color.default = lambda: self.function_color_map["default"]
-        self._crucipixel = crucipixel
+        self.core_crucipixel = crucipixel
         self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+1,self._total_width+1)
 
         def handle_select_color(name,value):
@@ -83,7 +86,8 @@ class Grid(lw.Widget):
     @_selected_color.setter
     def _selected_color(self,value):
         self._selected_color_property = value
-        self._selected_function_property = self._function_from_color(value)
+        self._selected_function_property = \
+            self._function_to_crucipixel_cell(self._function_from_color(value))
         
     @property
     def _selected_function(self):
@@ -91,7 +95,7 @@ class Grid(lw.Widget):
     @_selected_function.setter
     def _selected_function(self,value):
         self._selected_function_property = value
-        self._selected_color_property = self.function_color_map[value]
+        self._selected_color_property = self._crucipixel_to_color_cell(value)
 
     @property
     def _total_height(self):
@@ -102,16 +106,53 @@ class Grid(lw.Widget):
         return self.cols * self.cell_width
     
     @property
-    def crucipixel(self):
-        return self._crucipixel
+    def core_crucipixel(self):
+        return self._core_crucipixel
     
-    @crucipixel.setter
-    def crucipixel(self,value):
-        self._crucipixel = value
+    @core_crucipixel.setter
+    def core_crucipixel(self,value):
+        self._core_crucipixel = value
+        self.rows = value.rows
+        self.cols = value.cols
         self.update_status_from_crucipixel()
+
+    def _crucipixel_to_color_cell(self,cell):
+        if cell == core.Crucipixel.EMPTY:
+            return self.function_color_map["empty"]
+        elif cell == core.Crucipixel.MAIN_SELECTED:
+            return self.function_color_map["selected"]
+        elif cell == core.Crucipixel.DEFAULT:
+            return self.function_color_map["default"]
+    
+    def _function_to_crucipixel_cell(self,function):
+        if function == "selected":
+            return core.Crucipixel.MAIN_SELECTED
+        elif function == "empty":
+            return core.Crucipixel.EMPTY
+        elif function == "default":
+            return core.Crucipixel.DEFAULT
+    
+    def _color_to_crucipixel_cell(self,color):
+        return self._function_to_crucipixel_cell(self._function_from_color(color))
+
     
     def update_status_from_crucipixel(self):
-        pass
+        for i in range(self.core_crucipixel.rows):
+            for j in range(self.core_crucipixel.cols):
+                self._cell_color[i,j] = self._crucipixel_to_color_cell(self._core_crucipixel[i,j])
+                self.invalidate()
+    
+    def _force_update_crucipixel_from_status(self):
+        """ Should never be called, the update should be allowed to 
+            update the core data structure on its own
+        """
+        for i in range(self.rows):
+            update_line = [(i,
+                            j,
+                            self._color_to_crucipixel_cell(self._cell_color[i,j]))\
+                                for j in range(self.cols)]
+            self.core_crucipixel.update(update_line)
+                
     
     def on_draw(self,widget,context):
         context.save()
@@ -177,8 +218,14 @@ class Grid(lw.Widget):
         else:
             return False
     
-    def on_key_down(self, w, e):
-        super().on_key_down(w,e)
+    def on_key_up(self, w, e):
+        super().on_key_up(w,e)
+        if e.key == "r":
+            self.update_status_from_crucipixel()
+            return True
+        elif e.key == "f":
+            self._force_update_crucipixel_from_status()
+            return True
         try:
             self.selection_style = self.input_selection_style_map[e.key]
         except KeyError:
@@ -203,17 +250,17 @@ class Grid(lw.Widget):
             y = clamp(e.y,0,self._total_height)
             cell_col,cell_row = self._get_cell_id(Point(x,y))
             self._selection_memo = []
-            if self.selection_style == Grid.SELECTION_FREE:
+            if self.selection_style == CrucipixelGrid.SELECTION_FREE:
                 self._selection_backup = []
                 self._selection_start = Point(cell_col,cell_row)
                 self._select_rectangle(cell_col, cell_row)
-            elif self.selection_style == Grid.SELECTION_LINE:
+            elif self.selection_style == CrucipixelGrid.SELECTION_LINE:
                 self._restore_selection()
                 self._selection_backup = []
                 if cell_col == self._selection_start.col or\
                    cell_row == self._selection_start.row:
                     self._select_rectangle(cell_col, cell_row)
-            elif self.selection_style == Grid.SELECTION_RECTANGLE:
+            elif self.selection_style == CrucipixelGrid.SELECTION_RECTANGLE:
                 self._restore_selection()
                 self._selection_backup = []
                 self._select_rectangle(cell_col, cell_row)
@@ -225,8 +272,9 @@ class Grid(lw.Widget):
         if self.is_mouse_down:
             self.is_mouse_down = False
             self._selection_backup = []
-            if self.crucipixel:
-                self.crucipixel.update(self._selection_memo)
+            if self.core_crucipixel:
+                self.core_crucipixel.update(self._selection_memo)
+                pass
             self._selection_memo = []
         return False
     
@@ -273,7 +321,7 @@ class Selector(lw.Widget):
     
     def _get_rectangle_size(self) -> "num//Raises: AttributeError":
         if not hasattr(self, "maxW") or not hasattr(self, "maxH"):
-            raise AttributeError("Can't get size until first drawn")
+            raise AttributeError("Can't get cell_size until first drawn")
         return math.floor(self.maxH * .6) 
 
     def _get_text_max_size(self, context, lines):
@@ -356,17 +404,16 @@ class Guides(lw.Widget):
         self.translate(start.x +.5, start.y+.5)
         self.orientation = orientation
         self.elements = [ list(e) for e in elements ]
-        self.size = size
+        self.cell_size = size
         self.height = 50
         self._number_height = None
         self._number_width = None
         self._cell_list_to_update = True
         self._cell_list = []
         if self.orientation == Guides.HORIZONTAL:
-            self.clip_rectangle = Rectangle(Point(0,0),self.size * len(self.elements),-self.height)
+            self.clip_rectangle = Rectangle(Point(0,0),self.cell_size * len(self.elements),-self.height)
         else:
-            self.clip_rectangle = Rectangle(Point(0,0),-self.height,self.size * len(self.elements))
-        print(self.clip_rectangle)
+            self.clip_rectangle = Rectangle(Point(0,0),-self.height,self.cell_size * len(self.elements))
     
     def _update_cell_list(self):
         """Should be called only after on_draw has been called at least once"""
@@ -418,12 +465,12 @@ class Guides(lw.Widget):
 
     def _line_coordinates(self,line_index):
         if self.orientation == Guides.HORIZONTAL:
-            delta_x = (line_index + 1) * self.size
+            delta_x = (line_index + 1) * self.cell_size
             delta_y = -self.height
             return [Point(delta_x,0),Point(delta_x,delta_y)]
         elif self.orientation == Guides.VERTICAL:
             delta_x = -self.height
-            delta_y = (line_index +1) * self.size
+            delta_y = (line_index +1) * self.cell_size
             return [Point(0,delta_y),Point(delta_x,delta_y)]
         else:
             raise ValueError("Invalid orientation: {}".format(str(self.orientation)))
@@ -457,51 +504,72 @@ class Guides(lw.Widget):
         draw_line(self._line_coordinates(i+1))
         context.restore()
 
-class Crucipixel(lw.UncheckedContainer):
+class CompleteCrucipixel(lw.UncheckedContainer):
     
-    def __init__(self, start=Point(0,0), cell_size=15, *args, **kwargs):
+    def __init__(self,
+                 crucipixel,
+                 start=Point(0,0),
+                 cell_size=15, 
+                 *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.translate(start.x,start.y)
-        self.size = cell_size
-        self.grid = (Grid(start=Point(0,0),cols=30,rows=30,width=self.size,height=self.size)) 
-        self.grid.function_color_map["default"] = (0,0,0)
-        self.grid.selection_style = Grid.SELECTION_LINE
+        self.cell_size = cell_size
+        self.rows = crucipixel.rows
+        self.cols = crucipixel.cols
+        self.grid = CrucipixelGrid.from_crucipixel(crucipixel=crucipixel, 
+                                                   start=Point(0,0),
+                                                   cell_size=cell_size)
+        self.grid.selection_style = CrucipixelGrid.SELECTION_RECTANGLE
         self.add(self.grid)
-        elements=[[i] for i in range(30)]
-        elements[1]=[100,12,15]
-        g=Guides(start=Point(0,0),elements=elements,size=self.size,orientation=Guides.HORIZONTAL)
-        g.ID="Horizontal Guide"
-        self.add(g)
-        g=Guides(start=Point(0,0),elements=elements,size=self.size,orientation=Guides.VERTICAL)
-        g.ID="Vertical Guide"
-        self.add(g)
 
+        self.horizontal_guide = Guides(start=Point(0,0),
+                                       elements=crucipixel.col_guides,
+                                       size=cell_size,
+                                       orientation=Guides.HORIZONTAL)
+        self.horizontal_guide.ID="Horizontal Guide"
+        self.add(self.horizontal_guide)
+        
+        self.vertical_guide=Guides(start=Point(0,0),
+                                   elements=crucipixel.row_guides,
+                                   size=cell_size,
+                                   orientation=Guides.VERTICAL)
+        self.vertical_guide.ID="Vertical Guide"
+        self.add(self.vertical_guide)
+    
 class MainArea(lw.UncheckedContainer):
     
     def __init__(self):
         super().__init__()
         self.ID = "MainArea"
-        self.crucipixel = Crucipixel(start=Point(120,100),cell_size=20)
-        self.crucipixel.ID = "Crucipixel"
-        self.selector = Selector()
-        self.add(self.crucipixel)
-        self.add(self.selector)
+        self.core_crucipixel = None
+        self.selector = None
         self._mouse_down = False
         self._click_point = Point(0,0)
         self.counter=0
+    
+    def start_selector(self,start=Point(0,0)):
+        self.selector = Selector(start=start)
+        self.selector.ID = "Selector"
+        self.add(self.selector)
+    
+    def start_crucipixel(self,crucipixel:"core.CompleteCrucipixel",
+                         start=Point(120,100),cell_size=20):
+        self.core_crucipixel = CompleteCrucipixel(crucipixel, start, cell_size)
+        self.core_crucipixel.ID="CompleteCrucipixel"
+        self.add(self.core_crucipixel)
     
     def on_mouse_down(self, w, e):
         handled = super().on_mouse_down(w, e)
         if not handled:
             self._mouse_down = True
             self._click_point = Point(e.x,e.y)
-            self._translate_vector = Point(self.crucipixel.fromWidgetCoords.transform_point(0,0))
+            self._translate_vector = Point(self.core_crucipixel.fromWidgetCoords.transform_point(0,0))
     
     def on_mouse_move(self, w, e):
         if self._mouse_down:
             delta_x = int(e.x - self._click_point.x)
             delta_y = int(e.y - self._click_point.y)
-            self.crucipixel.set_translate(self._translate_vector.x + delta_x,
+            self.core_crucipixel.set_translate(self._translate_vector.x + delta_x,
                                           self._translate_vector.y + delta_y)
             self.invalidate()
         super().on_mouse_move(w,e)
@@ -509,14 +577,21 @@ class MainArea(lw.UncheckedContainer):
     def on_mouse_up(self,w,e):
         if self._mouse_down:
             self._mouse_down = False
-        super().on_mouse_up(w,e)
-        
+        super().on_mouse_up(w,e) 
 
 if __name__ == '__main__':
-    win = lw.MainWindow(title="Crucipixel Dev")
+    win = lw.MainWindow(title="CompleteCrucipixel Dev")
     win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.8,.8,.8,1))
     root = lw.Root(500,500)
-    root.set_child(MainArea())
+    main_area = MainArea()
+    root.set_child(main_area)
+    cruci = core.Crucipixel(5,5,[[i+1] for i in range(5)],[[i+1] for i in range(5)])
+    for i in range(5):
+        for j in range(5):
+            if i >= (4-j):
+                cruci[i,j] = core.Crucipixel.MAIN_SELECTED
+    main_area.start_selector()
+    main_area.start_crucipixel(cruci)
 
     win.add(root)
     win.start_main()

@@ -9,6 +9,7 @@ class Crucipixel:
     
     EMPTY=-1
     DEFAULT=0
+    MAIN_SELECTED=1
     
     def __init__(self,rows:"int >0",cols:"int >0",
                  row_guides:"iter of iter of int >0",
@@ -48,6 +49,10 @@ class Crucipixel:
             if not check_line(col,guide):
                 return False
         return True
+    
+    def update(self,cell_to_update:"iter"):
+        for (row,col,status) in cell_to_update:
+            self[row,col] = status
     
     def guides_from_string(self,string):
         pass

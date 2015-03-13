@@ -127,7 +127,6 @@ class Root(Gtk.DrawingArea):
 
     def on_key_up(self,w:"Gtk.Widget",e:"Gdk.EventKey"):
         self.child.on_key_up(self,_transform_keyboard_event("key_up",e))
-        print("From root: key_up called!")
         return True
     
     def invalidate(self):
@@ -153,7 +152,7 @@ class Widget:
     NO_CLIP=None
 
     def __init__(self, sizeX=0, sizeY=0):
-        self.size = (sizeX,sizeY)
+        self.cell_size = (sizeX,sizeY)
         self.ID = "Widget"
         self.signals = {} 
 
@@ -270,7 +269,8 @@ class Widget:
             return self.clip_rectangle.is_point_in(p)
     
     def invalidate(self):
-        self.father.invalidate()
+        if self.father:
+            self.father.invalidate()
     
     def register_signal(self,signal_name:"str",callback:"function"):
         try:
