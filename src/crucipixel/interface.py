@@ -8,7 +8,7 @@ import math
 from gi.repository import Gtk,Gdk
 from general.geometry import Point, Rectangle
 import general.lightwidgets as lw
-from support import get_from_to_inclusive, DefaultDict, clamp
+from general.support import get_from_to_inclusive, DefaultDict, clamp
 from collections import OrderedDict
 from general.lightwidgets import MouseEvent
 
@@ -17,9 +17,20 @@ class Grid(lw.Widget):
     SELECTION_FREE = 0
     SELECTION_LINE = 1
     SELECTION_RECTANGLE = 2
+    @classmethod
+    def from_crucipixel(cls,crucipixel,start=Point(0,0),
+                        width=10,height=10):
+        return cls(cols=crucipixel.cols,
+                   rows=crucipixel.rows,
+                   start=start,
+                   width=width,
+                   height=height,
+                   crucipixel=crucipixel)
+
     def __init__(self,cols=10,rows=10,
                  start=Point(0,0),
                  width=10,height=10,
+                 crucipixel=None,
                  *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.ID = "CrucipixelWindow"
@@ -30,28 +41,58 @@ class Grid(lw.Widget):
         self.cell_height=height
         self.is_mouse_down = False
         
-        self.input_color_associations = {"left" : "selected",
+        self.input_function_map = {"left" : "selected",
                                          "right" : "empty",
                                          "middle" : "default"}
-        self.function_color_associations = {"selected" : (0.3,0.3,0.3),
+        self.function_color_map = {"selected" : (0.3,0.3,0.3),
                                             "empty" : (1,1,1),
                                             "default" : (.8,.8,.8)}
+        self.input_selection_style_map = {"1" : Grid.SELECTION_FREE,
+                                          "2" : Grid.SELECTION_LINE,
+                                          "3" : Grid.SELECTION_RECTANGLE}
         
         self.selection_style = Grid.SELECTION_RECTANGLE
 
         self.set_translate(start.x+.5,start.y+.5)
-        self._selected_color = (0,0,0)
+        self._selected_color_property = (0,0,0)
         self._selection_start = Point(0,0)
         self._selection_backup = []
+        self._selection_memo = []
         self._cell_color = DefaultDict()
-        self._cell_color.default = lambda: self.function_color_associations["default"]
+        self._cell_color.default = lambda: self.function_color_map["default"]
+        self._crucipixel = crucipixel
         self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+1,self._total_width+1)
 
         def handle_select_color(name,value):
-            self.input_color_associations[name] = value
+            self.input_function_map[name] = value
             print(name,value)
         self.register_signal("select_color",handle_select_color)
     
+    def _color_from_function(self,function):
+        return self.function_color_map[function]
+
+    def _function_from_color(self,color):
+        for (f,c) in self.function_color_map.items():
+            if c == color:
+                return f
+        raise KeyError("No function has {} associated".format(color))
+
+    @property
+    def _selected_color(self):
+        return self._selected_color_property 
+    @_selected_color.setter
+    def _selected_color(self,value):
+        self._selected_color_property = value
+        self._selected_function_property = self._function_from_color(value)
+        
+    @property
+    def _selected_function(self):
+        return self._selected_function_property 
+    @_selected_function.setter
+    def _selected_function(self,value):
+        self._selected_function_property = value
+        self._selected_color_property = self.function_color_map[value]
+
     @property
     def _total_height(self):
         return self.rows * self.cell_height
@@ -59,6 +100,18 @@ class Grid(lw.Widget):
     @property
     def _total_width(self):
         return self.cols * self.cell_width
+    
+    @property
+    def crucipixel(self):
+        return self._crucipixel
+    
+    @crucipixel.setter
+    def crucipixel(self,value):
+        self._crucipixel = value
+        self.update_status_from_crucipixel()
+    
+    def update_status_from_crucipixel(self):
+        pass
     
     def on_draw(self,widget,context):
         context.save()
@@ -115,16 +168,22 @@ class Grid(lw.Widget):
             self.is_mouse_down = True
             cell_col,cell_row = self._get_cell_id(e)
             self._selection_start = Point(cell_col,cell_row)
-            try:
-                self._selected_color = self.function_color_associations[\
-                                            self.input_color_associations[e.button]]
-            except KeyError:
-                pass
-            self._cell_color[(cell_col,cell_row)] = self._selected_color
+            self._selected_color = self.function_color_map[\
+                                                           self.input_function_map[e.button]\
+                                                           ]
+            self._select_rectangle(cell_col, cell_row)
             self.invalidate()
             return True
         else:
             return False
+    
+    def on_key_down(self, w, e):
+        super().on_key_down(w,e)
+        try:
+            self.selection_style = self.input_selection_style_map[e.key]
+        except KeyError:
+            pass
+        return True
         
     def _restore_selection(self):
         for row, col, color in self._selection_backup:
@@ -136,14 +195,18 @@ class Grid(lw.Widget):
             for r in get_from_to_inclusive(self._selection_start.row, cell_row_end):
                 self._selection_backup.append((c, r, self._cell_color[c, r]))
                 self._cell_color[c, r] = self._selected_color
+                self._selection_memo.append((c,r,self._selected_function))
 
     def on_mouse_move(self, w, e):
         if self.is_mouse_down:
             x = clamp(e.x,0,self._total_width)
             y = clamp(e.y,0,self._total_height)
             cell_col,cell_row = self._get_cell_id(Point(x,y))
+            self._selection_memo = []
             if self.selection_style == Grid.SELECTION_FREE:
-                self._cell_color[cell_col,cell_row] = self._selected_color
+                self._selection_backup = []
+                self._selection_start = Point(cell_col,cell_row)
+                self._select_rectangle(cell_col, cell_row)
             elif self.selection_style == Grid.SELECTION_LINE:
                 self._restore_selection()
                 self._selection_backup = []
@@ -162,6 +225,9 @@ class Grid(lw.Widget):
         if self.is_mouse_down:
             self.is_mouse_down = False
             self._selection_backup = []
+            if self.crucipixel:
+                self.crucipixel.update(self._selection_memo)
+            self._selection_memo = []
         return False
     
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
@@ -337,10 +403,6 @@ class Guides(lw.Widget):
         
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
         value= super().is_point_in(p,category)
-#         if category == MouseEvent.MOUSE_DOWN:
-#             print("ID:",self.ID)
-#             print(self.clip_rectangle,p,self.clip_rectangle.is_point_in(p))
-#             print("Mouse down:",value)
         return value
     
     def on_mouse_down(self, w, e):
@@ -401,7 +463,10 @@ class Crucipixel(lw.UncheckedContainer):
         super().__init__(*args,**kwargs)
         self.translate(start.x,start.y)
         self.size = cell_size
-        self.add(Grid(start=Point(0,0),cols=30,rows=30,width=self.size,height=self.size)) 
+        self.grid = (Grid(start=Point(0,0),cols=30,rows=30,width=self.size,height=self.size)) 
+        self.grid.function_color_map["default"] = (0,0,0)
+        self.grid.selection_style = Grid.SELECTION_LINE
+        self.add(self.grid)
         elements=[[i] for i in range(30)]
         elements[1]=[100,12,15]
         g=Guides(start=Point(0,0),elements=elements,size=self.size,orientation=Guides.HORIZONTAL)
@@ -423,6 +488,7 @@ class MainArea(lw.UncheckedContainer):
         self.add(self.selector)
         self._mouse_down = False
         self._click_point = Point(0,0)
+        self.counter=0
     
     def on_mouse_down(self, w, e):
         handled = super().on_mouse_down(w, e)
@@ -444,6 +510,7 @@ class MainArea(lw.UncheckedContainer):
         if self._mouse_down:
             self._mouse_down = False
         super().on_mouse_up(w,e)
+        
 
 if __name__ == '__main__':
     win = lw.MainWindow(title="Crucipixel Dev")

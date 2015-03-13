@@ -17,7 +17,7 @@ class Crucipixel:
         self.cols = cols
         self.row_guides = [list(row) for row in row_guides]
         self.col_guides = [list(col) for col in col_guides]
-        self._matrix = [[Crucipixel.DEFAULT for j in range(self.cols)] for i in range(self.rows)]  # @UnusedVariable
+        self._matrix = [[Crucipixel.DEFAULT for j in range(self.cols)] for i in range(self.rows)]  # @UnusedVariable 
     
     def check_ok(self):
         def check_line(line,guide):
@@ -48,6 +48,9 @@ class Crucipixel:
             if not check_line(col,guide):
                 return False
         return True
+    
+    def guides_from_string(self,string):
+        pass
     
     def __getitem__(self,key):
         i,j = key

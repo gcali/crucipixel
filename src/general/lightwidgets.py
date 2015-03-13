@@ -5,13 +5,14 @@ Created on Feb 18, 2015
 '''
 
 from gi.repository import Gtk
-from gi.repository.Gdk import EventMask
+from gi.repository.Gdk import EventMask,EventType
 import cairo
 from math import pi,sqrt
 from general.geometry import Point, Rectangle
-from _operator import pos
+from _operator import pos 
+from gi.overrides.Gdk import Gdk
 
-def _transform_event(event_type,e,w):
+def _transform_mouse_event(event_type,e,w):
     x,y=w.toWidgetCoords.transform_point(e.x,e.y)
     new_e = MouseEvent(event_type,x,y)
     try:
@@ -40,17 +41,49 @@ class MouseEvent:
     def __copy__(self):
         return MouseEvent(self.event_type,self.x,self.y,self.button)
 
+def _transform_keyboard_event(event_type,e):
+    event_type = event_type
+    modifiers = { Gdk.KEY_Shift_L : "shift_l",
+                  Gdk.KEY_Shift_R : "shift_r",
+                  Gdk.KEY_Control_L : "ctrl_l",
+                  Gdk.KEY_Control_R : "ctrl_r",
+                  Gdk.KEY_Alt_L : "alt_l",
+                  Gdk.KEY_Alt_R : "alt_r"}
+    if e.keyval in modifiers:
+        key = modifiers[e.keyval]
+    else:
+        key = chr(Gdk.keyval_to_unicode(e.keyval))
+    return KeyboardEvent(event_type,key)
+    
+
+class KeyboardEvent:
+    UNKNOWN  = 0
+    KEY_DOWN = 1
+    KEY_UP   = 2
+    
+    def __init__(self, event_type, key, modifiers=[]):
+        self.event_type = event_type
+        self.key = key
+        self.modifiers = modifiers
+
 class Root(Gtk.DrawingArea):
     
     def __init__(self, width=-1,height=-1,*args,**kwargs):
         super().__init__(*args, **kwargs)
         self.child = None
-        events = EventMask.BUTTON_PRESS_MASK | EventMask.BUTTON_RELEASE_MASK | EventMask.POINTER_MOTION_MASK
+        events = EventMask.BUTTON_PRESS_MASK\
+                 | EventMask.BUTTON_RELEASE_MASK\
+                 | EventMask.POINTER_MOTION_MASK\
+                 | EventMask.KEY_PRESS_MASK\
+                 | EventMask.KEY_RELEASE_MASK
         self.add_events(events)
+        self.set_can_focus(True)
         self.connect("draw", self.on_draw)
         self.connect("button-press-event", self.on_mouse_down)
         self.connect("button-release-event", self.on_mouse_up)
         self.connect("motion-notify-event", self.on_mouse_move)
+        self.connect("key-press-event", self.on_key_down)
+        self.connect("key-release-event", self.on_key_up)
         self.set_min_size(width,height)
         self._lw_signals = {}
         
@@ -72,19 +105,29 @@ class Root(Gtk.DrawingArea):
         self.child.on_draw(self,context)
         context.restore()
     
-    def _transform_event(self,event_type,e):
-        return _transform_event(event_type,e,self.child)
+    def _transform_mouse_event(self,event_type,e):
+        return _transform_mouse_event(event_type,e,self.child)
     
     def on_mouse_down(self,w:"Gtk.Widget",e:"Gdk.EventButton"):
-        self.child.on_mouse_down(self,self._transform_event("mouse_down",e))
+        self.grab_focus()
+        self.child.on_mouse_down(self,self._transform_mouse_event("mouse_down",e))
         return True
     
     def on_mouse_up(self,w:"Gtk.Widget",e:"Gdk.EventButton"):
-        self.child.on_mouse_up(self,self._transform_event("mouse_up", e))
+        self.child.on_mouse_up(self,self._transform_mouse_event("mouse_up", e))
         return True
 
     def on_mouse_move(self,w:"Gtk.Widget",e:"Gdk.EventMotion"):
-        self.child.on_mouse_move(self,self._transform_event("mouse_move",e))
+        self.child.on_mouse_move(self,self._transform_mouse_event("mouse_move",e))
+        return True
+    
+    def on_key_down(self,w:"Gtk.Widget",e:"Gdk.EventKey"):
+        self.child.on_key_down(self,_transform_keyboard_event("key_down",e))
+        return True
+
+    def on_key_up(self,w:"Gtk.Widget",e:"Gdk.EventKey"):
+        self.child.on_key_up(self,_transform_keyboard_event("key_up",e))
+        print("From root: key_up called!")
         return True
     
     def invalidate(self):
@@ -210,6 +253,12 @@ class Widget:
         return False
     
     def on_mouse_up(self,w,e):
+        return False
+    
+    def on_key_down(self,w,e):
+        return False
+    
+    def on_key_up(self,w,e):
         return False
     
     def is_point_in(self,p:"Point",category=MouseEvent.UNKNOWN):
@@ -370,7 +419,7 @@ class Container(Widget):
             child.on_draw(self,context)
             context.restore()
     
-    def _handle_event(self,widget,event,callback,category):
+    def _handle_mouse_event(self,widget,event,callback,category):
         for child in reversed(list(self.list)):
             p = Point(child.toWidgetCoords.transform_point(event.x,event.y))
             try:
@@ -384,20 +433,36 @@ class Container(Widget):
                 return True
         return False
     
+    def _handle_keyboard_event(self,widget,event,callback):
+        for child in reversed(list(self.list)):
+            if (callback(child)(self,event)):
+                return True
+        return False
+    
     def on_mouse_down(self, w, e):
         def take_on_mouse_down(w):
             return w.on_mouse_down
-        return self._handle_event(w,e,take_on_mouse_down,MouseEvent.MOUSE_DOWN)
+        return self._handle_mouse_event(w,e,take_on_mouse_down,MouseEvent.MOUSE_DOWN)
     
     def on_mouse_up(self, w, e):
         def take_on_mouse_up(w):
             return w.on_mouse_up
-        return self._handle_event(w,e,take_on_mouse_up,MouseEvent.MOUSE_UP)
+        return self._handle_mouse_event(w,e,take_on_mouse_up,MouseEvent.MOUSE_UP)
 
     def on_mouse_move(self, w, e):
         def take_on_mouse_move(w):
             return w.on_mouse_move
-        return self._handle_event(w,e,take_on_mouse_move,MouseEvent.MOUSE_MOVE)
+        return self._handle_mouse_event(w,e,take_on_mouse_move,MouseEvent.MOUSE_MOVE)
+    
+    def on_key_down(self, w, e):
+        def take_on_key_down(w):
+            return w.on_key_down
+        return self._handle_keyboard_event(self, e, take_on_key_down)
+
+    def on_key_up(self, w, e):
+        def take_on_key_up(w):
+            return w.on_key_up
+        return self._handle_keyboard_event(self, e, take_on_key_up)
     
     def register_signal_for_child(self, signal_name:"str", widget:"Widget"):
         def handle_child(*args):
