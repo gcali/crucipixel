@@ -13,6 +13,10 @@ from collections import OrderedDict
 from general.lightwidgets import MouseEvent
 from crucipixel import core
 
+_start_selected = .3
+_start_default = .8
+_start_empty = 1
+
 class CrucipixelGrid(lw.Widget):
     
     SELECTION_FREE = 0
@@ -47,9 +51,9 @@ class CrucipixelGrid(lw.Widget):
         self.input_function_map = {"left" : "selected",
                                    "right" : "empty",
                                    "middle" : "default"}
-        self.function_color_map = {"selected" : (0.3,0.3,0.3),
-                                   "empty" : (1,1,1),
-                                   "default" : (.8,.8,.8)}
+        self.function_color_map = {"selected" : (_start_selected,_start_selected,_start_selected),
+                                   "empty" : (_start_empty,_start_empty,_start_empty),
+                                   "default" : (_start_default,_start_default,_start_default)}
         self.input_selection_style_map = {"1" : CrucipixelGrid.SELECTION_FREE,
                                           "2" : CrucipixelGrid.SELECTION_LINE,
                                           "3" : CrucipixelGrid.SELECTION_RECTANGLE}
@@ -71,10 +75,10 @@ class CrucipixelGrid(lw.Widget):
             print(name,value)
         self.register_signal("select_color",handle_select_color)
     
-    def _color_from_function(self,function):
+    def _function_to_color(self,function):
         return self.function_color_map[function]
 
-    def _function_from_color(self,color):
+    def _color_to_function(self,color):
         for (f,c) in self.function_color_map.items():
             if c == color:
                 return f
@@ -87,7 +91,7 @@ class CrucipixelGrid(lw.Widget):
     def _selected_color(self,value):
         self._selected_color_property = value
         self._selected_function_property = \
-            self._function_to_crucipixel_cell(self._function_from_color(value))
+            self._function_to_crucipixel_cell(self._color_to_function(value))
         
     @property
     def _selected_function(self):
@@ -133,7 +137,7 @@ class CrucipixelGrid(lw.Widget):
             return core.Crucipixel.DEFAULT
     
     def _color_to_crucipixel_cell(self,color):
-        return self._function_to_crucipixel_cell(self._function_from_color(color))
+        return self._function_to_crucipixel_cell(self._color_to_function(color))
 
     
     def update_status_from_crucipixel(self):
@@ -294,7 +298,7 @@ class Selector(lw.Widget):
         self.font_size = 20
         if options is None:
             self.options = OrderedDict(
-                                [("Left",(0,0,0)),
+                                [("Left",(.4,.4,.4)),
                                  ("Right",(1,1,1)),
                                  ("Middle",(.8,.8,.8))])
         else:
@@ -362,7 +366,6 @@ class Selector(lw.Widget):
 
     def on_draw(self,widget,context):
         context.save()
-#         context.select_font_face("sans-serif")
         context.set_font_size(self.font_size)
         context.set_line_width(1)
         lines = self.options.keys()
@@ -406,14 +409,15 @@ class Guides(lw.Widget):
         self.elements = [ list(e) for e in elements ]
         self.cell_size = size
         self.height = 50
+        self.width=self.height
         self._number_height = None
         self._number_width = None
         self._cell_list_to_update = True
         self._cell_list = []
         if self.orientation == Guides.HORIZONTAL:
-            self.clip_rectangle = Rectangle(Point(0,0),self.cell_size * len(self.elements),-self.height)
+            self.clip_rectangle = Rectangle(Point(0,0),self.cell_size * len(self.elements)+.5,-self.height)
         else:
-            self.clip_rectangle = Rectangle(Point(0,0),-self.height,self.cell_size * len(self.elements))
+            self.clip_rectangle = Rectangle(Point(0,0),-self.width,self.cell_size * len(self.elements)+.5)
     
     def _update_cell_list(self):
         """Should be called only after on_draw has been called at least once"""
@@ -422,9 +426,9 @@ class Guides(lw.Widget):
             line = self._line_coordinates(line_index)
             if self.orientation == Guides.HORIZONTAL:
                 next_x = line[0].x - 3
-                next_y = line[0].y - 5
+                next_y = line[0].y - 8
             elif self.orientation == Guides.VERTICAL:
-                next_x = line[0].x
+                next_x = line[0].x - 5
                 next_y = line[0].y - 5
             for (element_index, number) in enumerate(number_list):
                 text = str(number)
@@ -535,6 +539,29 @@ class CompleteCrucipixel(lw.UncheckedContainer):
                                    orientation=Guides.VERTICAL)
         self.vertical_guide.ID="Vertical Guide"
         self.add(self.vertical_guide)
+        self._current_scale = Point(1,1)
+    
+    def _update_scale(self):
+        self.scale(self._current_scale.x,self._current_scale.y)
+        self.invalidate()
+    
+    def on_key_down(self, w, e):
+        if e.key == "=" or e.key == "+":
+            self.zoom_in()
+            return True
+        elif e.key == "-":
+            self.zoom_out()
+            return True
+        else:
+            super().on_key_down(w,e)
+
+    def zoom_in(self):
+        self.scale(1.5,1.5)
+        self.invalidate()
+    
+    def zoom_out(self):
+        self.scale((1/1.5),(1/1.5))
+        self.invalidate()
     
 class MainArea(lw.UncheckedContainer):
     
@@ -584,6 +611,7 @@ if __name__ == '__main__':
     win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.8,.8,.8,1))
     root = lw.Root(500,500)
     main_area = MainArea()
+#     main_area.scale(2,2)
     root.set_child(main_area)
     cruci = core.Crucipixel(5,5,[[i+1] for i in range(5)],[[i+1] for i in range(5)])
     for i in range(5):

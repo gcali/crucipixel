@@ -11,6 +11,19 @@ class Crucipixel:
     DEFAULT=0
     MAIN_SELECTED=1
     
+    @classmethod
+    def guides_from_strings(cls,
+                            rows:"int >0",
+                            cols:"int >0",
+                            row_guides:"string",
+                            col_guides:"string"):
+        row_guides = cls._guide_from_string(row_guides)
+        col_guides = cls._guide_from_string(col_guides)
+        return cls(rows=rows,
+                   cols=cols,
+                   row_guides=row_guides,
+                   col_guides=col_guides)
+
     def __init__(self,rows:"int >0",cols:"int >0",
                  row_guides:"iter of iter of int >0",
                  col_guides:"iter of iter of int >0"):
@@ -54,9 +67,19 @@ class Crucipixel:
         for (row,col,status) in cell_to_update:
             self[row,col] = status
     
-    def guides_from_string(self,string):
-        pass
+    @staticmethod
+    def _guide_from_string(string) -> "guide":
+        """ Format: ',' separates elements of the same section,
+                    ';' separates sections
+        """
+        string = ''.join(string.split())
+        sections = string.split(";") 
+        return [ [int(e) for e in s.split(",")] for s in sections if s != ""]
     
+    @staticmethod
+    def _guide_to_string(guide:"guide") -> "string":
+        return ";".join([",".join([str(e) for e in section]) for section in guide])
+
     def __getitem__(self,key):
         i,j = key
         return self._matrix[i][j]
@@ -68,9 +91,15 @@ class Crucipixel:
     def __str__(self):
         rows_str = [" ".join([str(self[i,j]).rjust(2) for j in range(self.cols)])\
                 for i in range(self.rows)]
-        return "\n".join(rows_str)
+        row_guides = "Row guides: " + Crucipixel._guide_to_string(self.row_guides)
+        col_guides = "Col guides: " + Crucipixel._guide_to_string(self.col_guides)
+        total_str = rows_str + [row_guides] + [col_guides]
+        return "\n".join(total_str)
 
 if __name__ == '__main__':
+    def print_guide(guide):
+        for section in guide:
+            print(" ".join([str(e) for e in section]))
     row_guides = [[1],[2]]
     col_guides = [[1],[2]]
     cruci = Crucipixel(2,2,row_guides,col_guides)
@@ -89,4 +118,8 @@ if __name__ == '__main__':
     cruci[0,5] = -1
     print(cruci)
     print(cruci.check_ok())
+    print_guide(Crucipixel._guide_from_string("1,2;3,4;5,6;0"))
+    print("*****************")
+    cruci = Crucipixel.guides_from_strings(5, 5, "1;2;3;4;5", "1;2;3;4;5")
+    print(cruci)
     
