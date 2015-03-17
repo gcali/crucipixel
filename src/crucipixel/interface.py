@@ -197,8 +197,7 @@ class CrucipixelGrid(lw.Widget):
         
         context.move_to(0,0)
         context.line_to(-10,-10)
-        context.stroke()
-            
+        context.stroke() 
 
         context.restore()
     
@@ -250,8 +249,8 @@ class CrucipixelGrid(lw.Widget):
 
     def on_mouse_move(self, w, e):
         if self.is_mouse_down:
-            x = clamp(e.x,0,self._total_width)
-            y = clamp(e.y,0,self._total_height)
+            x = clamp(e.x,0,self._total_width-1)
+            y = clamp(e.y,0,self._total_height-1)
             cell_col,cell_row = self._get_cell_id(Point(x,y))
             self._selection_memo = []
             if self.selection_style == CrucipixelGrid.SELECTION_FREE:
@@ -278,7 +277,6 @@ class CrucipixelGrid(lw.Widget):
             self._selection_backup = []
             if self.core_crucipixel:
                 self.core_crucipixel.update(self._selection_memo)
-                pass
             self._selection_memo = []
         return False
     
@@ -393,10 +391,12 @@ class Selector(lw.Widget):
 class GuideCell:
     
     def __init__(self, coordinates:"(line,pos)",
-                 cell:"Rectangle", text:"str"):
+                 cell:"Rectangle", text:"str",wide_cell=None):
         self.cell = cell
         self.coordinates = coordinates
         self.text = text
+        self.wide_cell=wide_cell
+        
 
 class Guides(lw.Widget): 
     VERTICAL = 0
@@ -439,6 +439,9 @@ class Guides(lw.Widget):
                     rectangle = Rectangle(Point(next_x-width,next_y),
                                           width,
                                           -height)
+                    wide_rectangle = Rectangle(Point(line[0].x,next_y),
+                                               -self.cell_size,
+                                               -height)
                     next_y = next_y - height
                 elif self.orientation == Guides.VERTICAL:
                     width = self._number_width * len(text) + 3
@@ -446,10 +449,14 @@ class Guides(lw.Widget):
                     rectangle = Rectangle(Point(next_x - width,next_y),
                                           width,
                                           -height)
+                    wide_rectangle = Rectangle(Point(next_x - width,line[0].y),
+                                               width,
+                                               -self.cell_size)
                     next_x -= width
                 self._cell_list.append(GuideCell(coordinates=coordinates,
                                                 cell=rectangle,
-                                                text=text)
+                                                text=text,
+                                                wide_cell=wide_rectangle)
                                       ) 
         
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
@@ -460,11 +467,8 @@ class Guides(lw.Widget):
         p = Point(e.x,e.y)
         print("Point:",p)
         for e in self._cell_list:
-            if e.cell.start.x == 71:
-                print(e.cell)
-                print(p)
-                print(e.cell.is_point_in(p))
-            if e.cell.is_point_in(p):
+            if e.wide_cell.is_point_in(p):
+                print(e.text)
                 return True
 
     def _line_coordinates(self,line_index):
@@ -611,9 +615,10 @@ if __name__ == '__main__':
     win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.8,.8,.8,1))
     root = lw.Root(500,500)
     main_area = MainArea()
-#     main_area.scale(2,2)
     root.set_child(main_area)
-    cruci = core.Crucipixel(5,5,[[i+1] for i in range(5)],[[i+1] for i in range(5)])
+    hor_elements = "1,2;2,2;3;4;5"
+    ver_elements = "1,2;2,2;3;4;5"
+    cruci = core.Crucipixel.guides_from_strings(5, 5, hor_elements, ver_elements)
     for i in range(5):
         for j in range(5):
             if i >= (4-j):
