@@ -9,7 +9,7 @@ from gi.repository import Gtk,Gdk
 from general.geometry import Point, Rectangle
 import general.lightwidgets as lw
 from general.support import get_from_to_inclusive, DefaultDict, clamp,\
-    rgb_to_gtk
+                            rgb_to_gtk
 from collections import OrderedDict
 from general.lightwidgets import MouseEvent
 from crucipixel import core
@@ -52,9 +52,6 @@ class CrucipixelGrid(lw.Widget):
         self.input_function_map = {"left" : "selected",
                                    "right" : "empty",
                                    "middle" : "default"}
-#         self.function_color_map = {"selected" : (_start_selected,_start_selected,_start_selected),
-#                                    "empty" : (_start_empty,_start_empty,_start_empty),
-#                                    "default" : (_start_default,_start_default,_start_default)}
         self.function_color_map = {"selected" : _start_selected,
                                    "empty" : _start_empty,
                                    "default" : _start_default}
