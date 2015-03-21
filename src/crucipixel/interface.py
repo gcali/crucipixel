@@ -8,14 +8,15 @@ import math
 from gi.repository import Gtk,Gdk
 from general.geometry import Point, Rectangle
 import general.lightwidgets as lw
-from general.support import get_from_to_inclusive, DefaultDict, clamp
+from general.support import get_from_to_inclusive, DefaultDict, clamp,\
+    rgb_to_gtk
 from collections import OrderedDict
 from general.lightwidgets import MouseEvent
 from crucipixel import core
 
-_start_selected = .3
-_start_default = .8
-_start_empty = 1
+_start_selected = (.3,.3,.3)
+_start_default = (.8,.8,.8)
+_start_empty = rgb_to_gtk((240,255,240))
 
 class CrucipixelGrid(lw.Widget):
     
@@ -51,9 +52,12 @@ class CrucipixelGrid(lw.Widget):
         self.input_function_map = {"left" : "selected",
                                    "right" : "empty",
                                    "middle" : "default"}
-        self.function_color_map = {"selected" : (_start_selected,_start_selected,_start_selected),
-                                   "empty" : (_start_empty,_start_empty,_start_empty),
-                                   "default" : (_start_default,_start_default,_start_default)}
+#         self.function_color_map = {"selected" : (_start_selected,_start_selected,_start_selected),
+#                                    "empty" : (_start_empty,_start_empty,_start_empty),
+#                                    "default" : (_start_default,_start_default,_start_default)}
+        self.function_color_map = {"selected" : _start_selected,
+                                   "empty" : _start_empty,
+                                   "default" : _start_default}
         self.input_selection_style_map = {"1" : CrucipixelGrid.SELECTION_FREE,
                                           "2" : CrucipixelGrid.SELECTION_LINE,
                                           "3" : CrucipixelGrid.SELECTION_RECTANGLE}
@@ -67,6 +71,8 @@ class CrucipixelGrid(lw.Widget):
         self._selection_memo = []
         self._cell_color = DefaultDict()
         self._cell_color.default = lambda: self.function_color_map["default"]
+        self._highlight_row = None
+        self._highlight_col = None
         self.core_crucipixel = crucipixel
         self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+1,self._total_width+1)
 
@@ -159,18 +165,62 @@ class CrucipixelGrid(lw.Widget):
                 
     
     def on_draw(self,widget,context):
+        
+        def highlight_rectangles(row,col):
+            width = self._total_width
+            height = self._total_height
+            
+            row_rectangle = Rectangle(Point(0,row * self.cell_height),
+                                      width,
+                                      self.cell_height)
+            col_rectangle = Rectangle(Point(col * self.cell_width,0),
+                                      self.cell_width,
+                                      height)
+            context.save()
+#             r,g,b = rgb_to_gtk((95,158,160))
+            r,g,b = rgb_to_gtk((188,143,143))
+#             print(r,g,b)
+#             r,g,b = rgb_to_gtk((70,130,180))
+            context.set_source_rgba(r,g,b,.3)
+#             context.set_source_rgba(.69,.768,.87,.3)
+            context.rectangle(row_rectangle.start.x,
+                              row_rectangle.start.y,
+                              row_rectangle.width,
+                              row_rectangle.height)
+            context.fill()
+            
+            context.rectangle(col_rectangle.start.x,
+                              col_rectangle.start.y,
+                              col_rectangle.width,
+                              col_rectangle.height)
+            context.fill()
+            context.restore() 
+            
         context.save()
         context.set_line_width(1)
         width = self._total_width
         height= self._total_height
+        
+        def draw_cell(rgb:"(r,g,b)",area:"Rectangle"):
+            context.set_source_rgb(*rgb)
+            context.rectangle(area.start.x,
+                              area.start.y,
+                              area.width,
+                              area.height)
+            context.fill()
 
         for (k,v) in self._cell_color.items():
-            context.set_source_rgb(*v)
-            context.rectangle(k[0] * self.cell_width,
-                        k[1] * self.cell_height,
-                        self.cell_width,
-                        self.cell_height)
-            context.fill()
+            rectangle = Rectangle(Point(k[0] * self.cell_width,
+                                        k[1] * self.cell_height),
+                                  self.cell_width,
+                                  self.cell_height)
+            draw_cell(v,rectangle)
+#             context.set_source_rgb(*v)
+#             context.rectangle(k[0] * self.cell_width,
+#                         k[1] * self.cell_height,
+#                         self.cell_width,
+#                         self.cell_height)
+#             context.fill()
                         
         context.set_source_rgb(0,0,0)
         i=0
@@ -198,6 +248,11 @@ class CrucipixelGrid(lw.Widget):
         context.move_to(0,0)
         context.line_to(-10,-10)
         context.stroke() 
+        
+        if self._highlight_col is not None and\
+           self._highlight_row is not None:
+            highlight_rectangles(self._highlight_row,
+                                 self._highlight_col)
 
         context.restore()
     
@@ -248,10 +303,11 @@ class CrucipixelGrid(lw.Widget):
                 self._selection_memo.append((c,r,self._selected_function))
 
     def on_mouse_move(self, w, e):
+        x = clamp(e.x,0,self._total_width-1)
+        y = clamp(e.y,0,self._total_height-1)
+        cell_col,cell_row = self._get_cell_id(Point(x,y))
+        self.highlight_hover(cell_row,cell_col)
         if self.is_mouse_down:
-            x = clamp(e.x,0,self._total_width-1)
-            y = clamp(e.y,0,self._total_height-1)
-            cell_col,cell_row = self._get_cell_id(Point(x,y))
             self._selection_memo = []
             if self.selection_style == CrucipixelGrid.SELECTION_FREE:
                 self._selection_backup = []
@@ -268,7 +324,7 @@ class CrucipixelGrid(lw.Widget):
                 self._selection_backup = []
                 self._select_rectangle(cell_col, cell_row)
                     
-            self.invalidate()
+        self.invalidate()
         return False
     
     def on_mouse_up(self, w, e):
@@ -285,6 +341,10 @@ class CrucipixelGrid(lw.Widget):
             return True
         else:
             return super().is_point_in(p,category)
+    
+    def highlight_hover(self, row,col):
+        self._highlight_row = row
+        self._highlight_col = col
 
 class Selector(lw.Widget):
     
@@ -566,6 +626,12 @@ class CompleteCrucipixel(lw.UncheckedContainer):
     def zoom_out(self):
         self.scale((1/1.5),(1/1.5))
         self.invalidate()
+    
+    def on_mouse_enter(self):
+        super().on_mouse_enter()
+        
+    def on_mouse_exit(self):
+        super().on_mouse_exit()
     
 class MainArea(lw.UncheckedContainer):
     
