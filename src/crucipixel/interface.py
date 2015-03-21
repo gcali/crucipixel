@@ -66,8 +66,9 @@ class CrucipixelGrid(lw.Widget):
         self._selection_start = Point(0,0)
         self._selection_backup = []
         self._selection_memo = []
-        self._cell_color = DefaultDict()
-        self._cell_color.default = lambda: self.function_color_map["default"]
+        self._cell_function = DefaultDict()
+        self._cell_function.default = lambda: "default"
+#         self._cell_function.default = lambda: self.function_color_map["default"]
         self._highlight_row = None
         self._highlight_col = None
         self.core_crucipixel = crucipixel
@@ -131,6 +132,16 @@ class CrucipixelGrid(lw.Widget):
         elif cell == core.Crucipixel.DEFAULT:
             return self.function_color_map["default"]
     
+    def _crucipixel_to_function_cell(self,cell):
+        if cell == core.Crucipixel.EMPTY:
+            return "empty"
+        elif cell == core.Crucipixel.MAIN_SELECTED:
+            return "selected"
+        elif cell == core.Crucipixel.DEFAULT:
+            return "default"
+        else:
+            raise NameError("No known cell value {}".format(cell))
+    
     def _function_to_crucipixel_cell(self,function):
         if function == "selected":
             return core.Crucipixel.MAIN_SELECTED
@@ -146,7 +157,7 @@ class CrucipixelGrid(lw.Widget):
     def update_status_from_crucipixel(self):
         for i in range(self.core_crucipixel.rows):
             for j in range(self.core_crucipixel.cols):
-                self._cell_color[i,j] = self._crucipixel_to_color_cell(self._core_crucipixel[i,j])
+                self._cell_function[i,j] = self._crucipixel_to_function_cell(self._core_crucipixel[i,j])
                 self.invalidate()
     
     def _force_update_crucipixel_from_status(self):
@@ -156,7 +167,7 @@ class CrucipixelGrid(lw.Widget):
         for i in range(self.rows):
             update_line = [(i,
                             j,
-                            self._color_to_crucipixel_cell(self._cell_color[i,j]))\
+                            self._color_to_crucipixel_cell(self._cell_function[i,j]))\
                                 for j in range(self.cols)]
             self.core_crucipixel.update(update_line)
                 
@@ -198,15 +209,17 @@ class CrucipixelGrid(lw.Widget):
         width = self._total_width
         height= self._total_height
         
-        def draw_cell(rgb:"(r,g,b)",area:"Rectangle"):
-            context.set_source_rgb(*rgb)
+        def draw_cell(function:"cell_function",area:"Rectangle"):
+            r,g,b = self._function_to_color(function)
+            context.set_source_rgb(r,g,b)
             context.rectangle(area.start.x,
                               area.start.y,
                               area.width,
                               area.height)
             context.fill()
+                
 
-        for (k,v) in self._cell_color.items():
+        for (k,v) in self._cell_function.items():
             rectangle = Rectangle(Point(k[0] * self.cell_width,
                                         k[1] * self.cell_height),
                                   self.cell_width,
@@ -289,14 +302,14 @@ class CrucipixelGrid(lw.Widget):
         
     def _restore_selection(self):
         for row, col, color in self._selection_backup:
-            self._cell_color[row, col] = color
+            self._cell_function[row, col] = color
 
 
     def _select_rectangle(self, cell_col_end, cell_row_end):
         for c in get_from_to_inclusive(self._selection_start.col, cell_col_end):
             for r in get_from_to_inclusive(self._selection_start.row, cell_row_end):
-                self._selection_backup.append((c, r, self._cell_color[c, r]))
-                self._cell_color[c, r] = self._selected_color
+                self._selection_backup.append((c, r, self._cell_function[c, r]))
+                self._cell_function[c, r] = self._selected_color
                 self._selection_memo.append((c,r,self._selected_function))
 
     def on_mouse_move(self, w, e):
