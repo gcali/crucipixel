@@ -15,6 +15,22 @@ def get_from_to_inclusive(a,b):
     for i in range(a,b,get_step(a,b)):
         yield i
     yield b
+    
+def rgb_to_gtk(rgb:"tuple"):
+    def to_perc(n):
+        return n/255
+    r,g,b = rgb
+    return (to_perc(r),
+            to_perc(g),
+            to_perc(b))
+
+def gtk_to_rgb(rgb:"tuple"):
+    def from_perc(n):
+        return (n*255)
+    r,g,b = rgb
+    return (from_perc(r),
+            from_perc(g),
+            from_perc(b))
 
 class DefaultDict(dict): 
     

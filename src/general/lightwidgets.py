@@ -166,9 +166,24 @@ class Widget:
         self._clip_start = Widget.NO_CLIP
         self._clip_width = Widget.NO_CLIP
         self._clip_height = Widget.NO_CLIP
+        self._mouse_is_in = False
     
     def __str__(self):
         return str(self.ID)
+
+    @property
+    def mouse_is_in(self):
+        return self._mouse_is_in
+    
+    @mouse_is_in.setter
+    def mouse_is_in(self,value):
+        if not self._mouse_is_in and value:
+            self._mouse_is_in = True
+            self.on_mouse_enter()
+        elif self._mouse_is_in and not value:
+            self._mouse_is_in= False
+            self.on_mouse_exit()
+            
 
     @property
     def start(self):
@@ -245,7 +260,14 @@ class Widget:
     def on_draw(self,w,c):
         pass
     
+    def on_mouse_exit(self):
+        return False
+    
+    def on_mouse_enter(self):
+        return True
+    
     def on_mouse_move(self,widget,event):
+        self._mouse_was_in = True
         return False
     
     def on_mouse_down(self,w,e):
@@ -424,11 +446,14 @@ class Container(Widget):
             p = Point(child.toWidgetCoords.transform_point(event.x,event.y))
             try:
                 if child.is_point_in(p,category):
+                    child.mouse_is_in = True
                     local_event = event.__copy__()
                     local_event.x = p.x
                     local_event.y = p.y
                     if (callback(child))(self,local_event):
                         return True
+                else:
+                    child.mouse_is_in = False
             except TypeError:
                 return True
         return False
