@@ -17,6 +17,7 @@ from crucipixel import core
 _start_selected = (.3,.3,.3)
 _start_default = (.8,.8,.8)
 _start_empty = rgb_to_gtk((240,255,240))
+_highlight = rgb_to_gtk((95,158,160))
 
 class CrucipixelGrid(lw.Widget):
     
@@ -185,12 +186,9 @@ class CrucipixelGrid(lw.Widget):
                                       self.cell_width,
                                       height)
             context.save()
-#             r,g,b = rgb_to_gtk((95,158,160))
-            r,g,b = rgb_to_gtk((188,143,143))
-#             print(r,g,b)
-#             r,g,b = rgb_to_gtk((70,130,180))
+            r,g,b = _highlight
+#             r,g,b = rgb_to_gtk((188,143,143))
             context.set_source_rgba(r,g,b,.3)
-#             context.set_source_rgba(.69,.768,.87,.3)
             context.rectangle(row_rectangle.start.x,
                               row_rectangle.start.y,
                               row_rectangle.width,
@@ -309,7 +307,8 @@ class CrucipixelGrid(lw.Widget):
         for c in get_from_to_inclusive(self._selection_start.col, cell_col_end):
             for r in get_from_to_inclusive(self._selection_start.row, cell_row_end):
                 self._selection_backup.append((c, r, self._cell_function[c, r]))
-                self._cell_function[c, r] = self._selected_color
+#                 self._cell_function[c, r] = self._selected_color
+                self._cell_function[c, r] = self._selected_function
                 self._selection_memo.append((c,r,self._selected_function))
 
     def on_mouse_move(self, w, e):
