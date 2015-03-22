@@ -5,6 +5,7 @@ Created on Feb 22, 2015
 '''
 
 import math
+import cairo
 from gi.repository import Gtk,Gdk
 from general.geometry import Point, Rectangle
 import general.lightwidgets as lw
@@ -17,6 +18,7 @@ from crucipixel import core
 _start_selected = (.3,.3,.3)
 _start_default = (.8,.8,.8)
 _start_empty = rgb_to_gtk((240,255,240))
+_highlight = rgb_to_gtk((95,158,160))
 
 class CrucipixelGrid(lw.Widget):
     
@@ -184,7 +186,7 @@ class CrucipixelGrid(lw.Widget):
                                       self.cell_width,
                                       height)
             context.save()
-            r,g,b = rgb_to_gtk((188,143,143))
+            r,g,b = _highlight
             context.set_source_rgba(r,g,b,.3)
             context.rectangle(row_rectangle.start.x,
                               row_rectangle.start.y,
@@ -212,6 +214,15 @@ class CrucipixelGrid(lw.Widget):
                               area.width,
                               area.height)
             context.fill()
+            if function == "empty":
+                r,g,b = self._function_to_color("selected")
+                context.set_source_rgb(r,g,b)
+                context.set_line_cap(cairo.LINE_CAP_ROUND)
+                context.move_to(area.start.x + area.width - 4,
+                                area.start.y + 4)
+                context.line_to(area.start.x + 4,
+                                area.start.y + area.height - 4)
+                context.stroke()
                 
 
         for (k,v) in self._cell_function.items():
@@ -272,6 +283,12 @@ class CrucipixelGrid(lw.Widget):
             return True
         else:
             return False
+    
+    def on_mouse_exit(self):
+        super().on_mouse_exit()
+        self._highlight_col = None
+        self._highlight_row = None
+        self.invalidate()
     
     def on_key_up(self, w, e):
         super().on_key_up(w,e)
@@ -628,8 +645,8 @@ class CompleteCrucipixel(lw.UncheckedContainer):
         super().on_mouse_enter()
         
     def on_mouse_exit(self):
-        super().on_mouse_exit()
-    
+        return super().on_mouse_exit(self)
+        
 class MainArea(lw.UncheckedContainer):
     
     def __init__(self):
@@ -686,8 +703,8 @@ if __name__ == '__main__':
         for j in range(5):
             if i >= (4-j):
                 cruci[i,j] = core.Crucipixel.MAIN_SELECTED
-    main_area.start_selector()
     main_area.start_crucipixel(cruci)
+    main_area.start_selector()
 
     win.add(root)
     win.start_main()

@@ -475,6 +475,7 @@ class Container(Widget):
         return self._handle_mouse_event(w,e,take_on_mouse_up,MouseEvent.MOUSE_UP)
 
     def on_mouse_move(self, w, e):
+        super().on_mouse_move(w,e)
         def take_on_mouse_move(w):
             return w.on_mouse_move
         return self._handle_mouse_event(w,e,take_on_mouse_move,MouseEvent.MOUSE_MOVE)
