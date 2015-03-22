@@ -645,7 +645,7 @@ class CompleteCrucipixel(lw.UncheckedContainer):
         super().on_mouse_enter()
         
     def on_mouse_exit(self):
-        return super().on_mouse_exit(self)
+        return super().on_mouse_exit()
         
 class MainArea(lw.UncheckedContainer):
     
