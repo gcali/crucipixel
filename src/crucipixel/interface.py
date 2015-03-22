@@ -77,6 +77,8 @@ class CrucipixelGrid(lw.Widget):
         self._highlight_col = None
         self.core_crucipixel = crucipixel
         self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+1,self._total_width+1)
+        self.should_drag = False
+        self.is_dragging = False
 
         def handle_select_color(name,value):
             self.input_function_map[name] = value
@@ -251,7 +253,7 @@ class CrucipixelGrid(lw.Widget):
         
 #     
     def on_mouse_down(self, w, e):
-        if self.is_point_in(Point(e.x,e.y)):
+        if not self.should_drag and self.is_point_in(Point(e.x,e.y)):
             self.is_mouse_down = True
             cell_col,cell_row = self._get_cell_id(e)
             self._selection_start = Point(cell_col,cell_row)
@@ -260,6 +262,7 @@ class CrucipixelGrid(lw.Widget):
             self.invalidate()
             return True
         else:
+            self.is_dragging = True
             return False
     
     def on_mouse_exit(self):
@@ -270,14 +273,25 @@ class CrucipixelGrid(lw.Widget):
     
     def on_key_up(self, w, e):
         super().on_key_up(w,e)
-        if e.key == "r":
+        if e.key == "ctrl_l":
+            self.should_drag = False
+#             return True
+        elif e.key == "r":
             self.update_status_from_crucipixel()
+#             return True
+        else:
+            try:
+                self.selection_style = self.input_selection_style_map[e.key]
+            except KeyError:
+                pass
+        return False
+
+    def on_key_down(self, w, e):
+        super().on_key_down(w,e)
+        if e.key == "ctrl_l":
+            self.should_drag = True
             return True
-        try:
-            self.selection_style = self.input_selection_style_map[e.key]
-        except KeyError:
-            pass
-        return True
+        return False
         
     def _restore_selection(self):
         for row, col, color in self._selection_backup:
@@ -292,6 +306,8 @@ class CrucipixelGrid(lw.Widget):
                 self._selection_core_encode.append((c,r,self._selected_core_function))
 
     def on_mouse_move(self, w, e):
+        if self.is_dragging:
+            return False
         x = clamp(e.x,0,self._total_width-1)
         y = clamp(e.y,0,self._total_height-1)
         cell_col,cell_row = self._get_cell_id(Point(x,y))
@@ -323,6 +339,7 @@ class CrucipixelGrid(lw.Widget):
             if self.core_crucipixel:
                 self.core_crucipixel.update(self._selection_core_encode)
             self._selection_core_encode = []
+        self.is_dragging = False
         return False
     
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
@@ -522,7 +539,7 @@ class Guides(lw.Widget):
                 next_x = line[0].x - self.font_size//2
                 next_y = line[0].y - (2*self.font_size)//3
             elif self.orientation == Guides.VERTICAL:
-                next_x = line[0].x - self.font_size//3
+                next_x = line[0].x - self.font_size//2
                 next_y = line[0].y - self.font_size//2
             for element in element_list:
                 text = str(element.value)
@@ -740,7 +757,7 @@ if __name__ == '__main__':
     root = lw.Root(500,500)
     main_area = MainArea()
     root.set_child(main_area)
-    hor_elements = "1,2;2,2;3;4;5"
+    hor_elements = "1,2;12,2;3;4;5"
     ver_elements = "1,2;2,12;3;4;5"
     cruci = core.Crucipixel.guides_from_strings(5, 5, hor_elements, ver_elements)
     for i in range(5):
