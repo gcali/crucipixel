@@ -501,6 +501,12 @@ class Guides(lw.Widget):
             self.clip_rectangle = Rectangle(Point(0,0),self.cell_size * len(self.elements)+.5,-self.height)
         else:
             self.clip_rectangle = Rectangle(Point(0,0),-self.width,self.cell_size * len(self.elements)+.5)
+        self.color_map = {
+            "done" : rgb_to_gtk(46,139,87),
+            "wrong" : rgb_to_gtk(178,34,34),
+            "cancelled" : rgb_to_gtk(139,134,130)
+            }
+
         
     def _update_cell_list(self):
         """Should be called only after on_draw has been called at least once"""
@@ -517,16 +523,16 @@ class Guides(lw.Widget):
                 text = str(element.value)
                 if self.orientation == Guides.HORIZONTAL:
                     width = self._number_width * len(text)
-                    height = self._number_height + 5
+                    height = self._number_height
                     rectangle = Rectangle(Point(next_x-width,next_y),
                                           width,
                                           -height)
                     wide_rectangle = Rectangle(Point(line[0].x,next_y),
                                                -self.cell_size,
                                                -height)
-                    next_y = next_y - height
+                    next_y = next_y - height - 5
                 elif self.orientation == Guides.VERTICAL:
-                    width = self._number_width * len(text) + 3
+                    width = self._number_width * len(text)
                     height = self._number_height
                     rectangle = Rectangle(Point(next_x - width,next_y),
                                           width,
@@ -534,7 +540,7 @@ class Guides(lw.Widget):
                     wide_rectangle = Rectangle(Point(next_x - width,line[0].y),
                                                width,
                                                -self.cell_size)
-                    next_x -= width + 3
+                    next_x -= width + 5
                 element.cell = rectangle
                 element.wide_cell = wide_rectangle
         
@@ -545,10 +551,17 @@ class Guides(lw.Widget):
     def on_mouse_down(self, w, e):
         p = Point(e.x,e.y)
         print("Point:",p)
-        for e in self._cell_list:
-            if e.wide_cell.is_point_in(p):
-                print(e.text)
-                return True
+        for line in self.elements:
+            for e in line:
+                if e.wide_cell.is_point_in(p):
+                    print("I was in!")
+                    print("Old value: {}".format(e.cancelled))
+                    e.cancelled = not e.cancelled
+                    self.invalidate()
+                    return True
+                elif e.coordinates == (0,0):
+                    print("I wasn't in, why?")
+                    print(e.wide_cell)
 
     def _line_coordinates(self,line_index):
         if self.orientation == Guides.HORIZONTAL:
@@ -565,8 +578,19 @@ class Guides(lw.Widget):
 
     def _draw_element(self, context, e):
         context.save()
+        if e.done:
+            context.set_source_rgb(*self.color_map["done"])
+        elif e.wrong:
+            context.set_source_rgb(*self.color_map["wrong"])
+        elif e.cancelled:
+            context.set_source_rgb(*self.color_map["cancelled"])
         context.move_to(e.cell.start.x, e.cell.start.y)
         context.show_text(e.text)
+        if e.cancelled:
+            context.move_to(e.cell.start.x-1,e.cell.start.y)
+            context.line_to(e.cell.start.x + e.cell.width + 1,
+                            e.cell.start.y + e.cell.height+1)
+            context.stroke()
         context.restore()
 
     def on_draw(self, widget, context):
@@ -721,4 +745,5 @@ if __name__ == '__main__':
     main_area.start_selector()
 
     win.add(root)
+    root.grab_focus()
     win.start_main()
