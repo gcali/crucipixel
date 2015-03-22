@@ -453,8 +453,6 @@ class Container(Widget):
                     if (callback(child))(self,local_event):
                         return True
                 else:
-                    if self.ID == "CompleteCrucipixel" and child.ID == "CrucipixelWindow":
-                        print("Hi, i'm the mouse down handler")
                     child.mouse_is_in = False
             except TypeError:
                 return True
