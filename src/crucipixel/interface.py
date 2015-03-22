@@ -499,10 +499,10 @@ class Guides(lw.Widget):
         for (line_index,number_list) in enumerate(self.elements): 
             line = self._line_coordinates(line_index)
             if self.orientation == Guides.HORIZONTAL:
-                next_x = line[0].x - 3
+                next_x = line[0].x - 5
                 next_y = line[0].y - 8
             elif self.orientation == Guides.VERTICAL:
-                next_x = line[0].x - 5
+                next_x = line[0].x - 3
                 next_y = line[0].y - 5
             for (element_index, number) in enumerate(number_list):
                 text = str(number)
@@ -526,7 +526,7 @@ class Guides(lw.Widget):
                     wide_rectangle = Rectangle(Point(next_x - width,line[0].y),
                                                width,
                                                -self.cell_size)
-                    next_x -= width
+                    next_x -= width + 3
                 self._cell_list.append(GuideCell(coordinates=coordinates,
                                                 cell=rectangle,
                                                 text=text,
