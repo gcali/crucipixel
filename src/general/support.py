@@ -16,18 +16,30 @@ def get_from_to_inclusive(a,b):
         yield i
     yield b
     
-def rgb_to_gtk(rgb:"tuple"):
+def rgb_to_gtk(*args):
+    """Takes either a tuple of the form (r,g,b) or
+       three arguments, r,g,b
+    """
+    if len(args) == 1:
+        r,g,b = args[0]
+    elif len(args) == 3:
+        r,g,b = args
     def to_perc(n):
         return n/255
-    r,g,b = rgb
     return (to_perc(r),
             to_perc(g),
             to_perc(b))
 
-def gtk_to_rgb(rgb:"tuple"):
+def gtk_to_rgb(*args):
+    """Takes either a tuple of the form (r,g,b) or
+       three arguments, r,g,b
+    """
+    if len(args) == 1:
+        r,g,b = args[0]
+    elif len(args) == 3:
+        r,g,b = args
     def from_perc(n):
         return (n*255)
-    r,g,b = rgb
     return (from_perc(r),
             from_perc(g),
             from_perc(b))
