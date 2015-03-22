@@ -78,7 +78,7 @@ def clamp(value:"num",min_v:"num",max_v:"num") -> "num":
    
 if __name__ == '__main__':
     d = DefaultDict()
-    d.default = "Ciao!"
+    d.default = lambda: "Ciao!"
     print("Items at start:")
     print(d)
     print(d[12])
