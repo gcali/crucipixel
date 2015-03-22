@@ -5,7 +5,7 @@ Created on Feb 18, 2015
 '''
 
 from gi.repository import Gtk
-from gi.repository.Gdk import EventMask,EventType
+from gi.repository.Gdk import EventMask
 import cairo
 from math import pi,sqrt
 from general.geometry import Point, Rectangle
@@ -110,7 +110,8 @@ class Root(Gtk.DrawingArea):
     
     def on_mouse_down(self,w:"Gtk.Widget",e:"Gdk.EventButton"):
         self.grab_focus()
-        self.child.on_mouse_down(self,self._transform_mouse_event("mouse_down",e))
+        if e.type == Gdk.EventType.BUTTON_PRESS:
+            self.child.on_mouse_down(self,self._transform_mouse_event("mouse_down",e))
         return True
     
     def on_mouse_up(self,w:"Gtk.Widget",e:"Gdk.EventButton"):

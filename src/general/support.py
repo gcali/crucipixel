@@ -3,7 +3,6 @@ Created on Feb 25, 2015
 
 @author: giovanni
 '''
-from operator import __setitem__
 
 def get_step(a,b):
     if b >= a:
