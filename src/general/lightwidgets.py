@@ -482,6 +482,10 @@ class Container(Widget):
             return w.on_mouse_move
         return self._handle_mouse_event(w,e,take_on_mouse_move,MouseEvent.MOUSE_MOVE)
     
+    def on_mouse_exit(self):
+        for child in reversed(list(self.list)):
+            child.mouse_is_in = False
+    
     def on_key_down(self, w, e):
         def take_on_key_down(w):
             return w.on_key_down
