@@ -480,6 +480,10 @@ class Guides(lw.Widget):
             for position,e in enumerate(line):
                 new_e = GuideElement(coordinates=(line_index,position),
                                      value=e)
+                if line_index == 1:
+                    new_e.wrong = True
+                elif line_index == 4:
+                    new_e.done = True
                 new_line.append(new_e)
             new_elements.append(new_line)
         return new_elements
@@ -493,6 +497,7 @@ class Guides(lw.Widget):
         self.cell_size = size
         self.height = 50
         self.width=self.height
+        self.font_size = 13
         self._number_height = None
         self._number_width = None
         self._cell_list_to_update = True
@@ -514,11 +519,11 @@ class Guides(lw.Widget):
         for (line_index,element_list) in enumerate(self.elements): 
             line = self._line_coordinates(line_index)
             if self.orientation == Guides.HORIZONTAL:
-                next_x = line[0].x - 5
-                next_y = line[0].y - 8
+                next_x = line[0].x - self.font_size//2
+                next_y = line[0].y - (2*self.font_size)//3
             elif self.orientation == Guides.VERTICAL:
-                next_x = line[0].x - 3
-                next_y = line[0].y - 5
+                next_x = line[0].x - self.font_size//3
+                next_y = line[0].y - self.font_size//2
             for element in element_list:
                 text = str(element.value)
                 if self.orientation == Guides.HORIZONTAL:
@@ -530,7 +535,7 @@ class Guides(lw.Widget):
                     wide_rectangle = Rectangle(Point(line[0].x,next_y),
                                                -self.cell_size,
                                                -height)
-                    next_y = next_y - height - 5
+                    next_y = next_y - height - self.font_size//2
                 elif self.orientation == Guides.VERTICAL:
                     width = self._number_width * len(text)
                     height = self._number_height
@@ -540,7 +545,7 @@ class Guides(lw.Widget):
                     wide_rectangle = Rectangle(Point(next_x - width,line[0].y),
                                                width,
                                                -self.cell_size)
-                    next_x -= width + 5
+                    next_x -= width + self.font_size//2
                 element.cell = rectangle
                 element.wide_cell = wide_rectangle
         
@@ -618,6 +623,7 @@ class Guides(lw.Widget):
         draw_line(self._line_coordinates(i+1))
 
         context.set_line_width(1)
+        context.set_font_size(self.font_size)
         for line in self.elements:
             for e in line:
                 self._draw_element(context, e)
@@ -735,7 +741,7 @@ if __name__ == '__main__':
     main_area = MainArea()
     root.set_child(main_area)
     hor_elements = "1,2;2,2;3;4;5"
-    ver_elements = "1,2;2,2;3;4;5"
+    ver_elements = "1,2;2,12;3;4;5"
     cruci = core.Crucipixel.guides_from_strings(5, 5, hor_elements, ver_elements)
     for i in range(5):
         for j in range(5):
