@@ -14,7 +14,6 @@ from general.support import get_from_to_inclusive, DefaultDict, clamp,\
 from collections import OrderedDict
 from general.lightwidgets import MouseEvent
 from crucipixel import core
-from _symtable import CELL
 
 _start_selected = (.3,.3,.3)
 _start_default = (.8,.8,.8)
