@@ -14,14 +14,15 @@ from general.support import get_from_to_inclusive, DefaultDict, clamp,\
 from collections import OrderedDict
 from general.lightwidgets import MouseEvent
 from crucipixel import core
+from _symtable import CELL
 
 _start_selected = (.3,.3,.3)
 _start_default = (.8,.8,.8)
 _start_empty = rgb_to_gtk((240,255,240))
-_highlight = rgb_to_gtk((95,158,160))
 _highlight = rgb_to_gtk((0,250,154))
 _highlight = rgb_to_gtk((210,105,30))
 _highlight = rgb_to_gtk((186,85,211))
+_highlight = rgb_to_gtk((95,158,160))
 
 class CrucipixelGrid(lw.Widget):
     
@@ -190,10 +191,16 @@ class CrucipixelGrid(lw.Widget):
                 r,g,b = self._function_to_color("selected")
                 context.set_source_rgb(r,g,b)
                 context.set_line_cap(cairo.LINE_CAP_ROUND)
-                context.move_to(area.start.x + area.width - 4,
-                                area.start.y + 4)
-                context.line_to(area.start.x + 4,
-                                area.start.y + area.height - 4)
+                delta_x = self.cell_width // 2.8
+                delta_y = self.cell_height // 2.8
+                context.move_to(area.start.x + area.width - delta_x,
+                                area.start.y + delta_y)
+                context.line_to(area.start.x + delta_x,
+                                area.start.y + area.height - delta_y)
+                context.move_to(area.start.x + area.width - delta_x,
+                                area.start.y + area.width - delta_y)
+                context.line_to(area.start.x + delta_x,
+                                area.start.y + delta_y)
                 context.stroke()
                 
 
@@ -439,17 +446,51 @@ class GuideCell:
         self.coordinates = coordinates
         self.text = text
         self.wide_cell=wide_cell
+
+class GuideElement:
+    
+    def __init__(self, coordinates:"(line,pos)",
+                 value:"num", 
+                 done:"bool"=False,
+                 wrong:"bool"=False,
+                 cancelled:"bool"=False,
+                 cell:"Rectangle"=None,
+                 wide_cell:"Rectangle"=None):
+        self.coordinates = coordinates
+        self.value = value
+        self.done = done
+        self.wrong = wrong
+        self.cancelled = cancelled 
+        self.cell = cell
+        self.wide_cell = wide_cell
+    
+    @property
+    def text(self):
+        return str(self.value)
         
 
 class Guides(lw.Widget): 
     VERTICAL = 0
     HORIZONTAL = 1
+    
+    @staticmethod
+    def _elements_from_list(elements):
+        new_elements = []
+        for line_index,line in enumerate(elements):
+            new_line = []
+            for position,e in enumerate(line):
+                new_e = GuideElement(coordinates=(line_index,position),
+                                     value=e)
+                new_line.append(new_e)
+            new_elements.append(new_line)
+        return new_elements
+
     def __init__(self, elements:"num iterable", 
                  start:"Point", size:"num", orientation=HORIZONTAL): 
         super().__init__()
         self.translate(start.x +.5, start.y+.5)
         self.orientation = orientation
-        self.elements = [ list(e) for e in elements ]
+        self.elements = Guides._elements_from_list([ list(e) for e in elements ])
         self.cell_size = size
         self.height = 50
         self.width=self.height
@@ -465,7 +506,7 @@ class Guides(lw.Widget):
     def _update_cell_list(self):
         """Should be called only after on_draw has been called at least once"""
         self._cell_list = []
-        for (line_index,number_list) in enumerate(self.elements): 
+        for (line_index,element_list) in enumerate(self.elements): 
             line = self._line_coordinates(line_index)
             if self.orientation == Guides.HORIZONTAL:
                 next_x = line[0].x - 5
@@ -473,9 +514,8 @@ class Guides(lw.Widget):
             elif self.orientation == Guides.VERTICAL:
                 next_x = line[0].x - 3
                 next_y = line[0].y - 5
-            for (element_index, number) in enumerate(number_list):
-                text = str(number)
-                coordinates = (line_index,element_index)
+            for element in element_list:
+                text = str(element.value)
                 if self.orientation == Guides.HORIZONTAL:
                     width = self._number_width * len(text)
                     height = self._number_height + 5
@@ -496,11 +536,8 @@ class Guides(lw.Widget):
                                                width,
                                                -self.cell_size)
                     next_x -= width + 3
-                self._cell_list.append(GuideCell(coordinates=coordinates,
-                                                cell=rectangle,
-                                                text=text,
-                                                wide_cell=wide_rectangle)
-                                      ) 
+                element.cell = rectangle
+                element.wide_cell = wide_rectangle
         
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
         value= super().is_point_in(p,category)
@@ -526,6 +563,11 @@ class Guides(lw.Widget):
         else:
             raise ValueError("Invalid orientation: {}".format(str(self.orientation)))
     
+
+    def _draw_element(self, context, e):
+        context.move_to(e.cell.start.x, e.cell.start.y)
+        context.show_text(e.text)
+
     def on_draw(self, widget, context):
         def draw_line(line):
             context.move_to(line[0].x,line[0].y)
@@ -538,12 +580,8 @@ class Guides(lw.Widget):
         self._number_height = -int(ext[1]) 
         if self._cell_list_to_update:
             self._update_cell_list()
+            self._cell_list_to_update = False
         
-        for e in self._cell_list:
-            context.move_to(e.cell.start.x,
-                            e.cell.start.y)
-            context.show_text(e.text)
-
         for (i,e) in enumerate(self.elements):
             line = self._line_coordinates(i)
             if (i+1) % 5 == 0:
@@ -553,6 +591,12 @@ class Guides(lw.Widget):
             draw_line(line)
         context.set_line_width(2)
         draw_line(self._line_coordinates(i+1))
+
+        context.set_line_width(1)
+        for line in self.elements:
+            for e in line:
+                self._draw_element(context, e)
+
         context.restore()
 
 class CompleteCrucipixel(lw.UncheckedContainer):
