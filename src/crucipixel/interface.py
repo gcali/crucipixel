@@ -19,6 +19,9 @@ _start_selected = (.3,.3,.3)
 _start_default = (.8,.8,.8)
 _start_empty = rgb_to_gtk((240,255,240))
 _highlight = rgb_to_gtk((95,158,160))
+_highlight = rgb_to_gtk((0,250,154))
+_highlight = rgb_to_gtk((210,105,30))
+_highlight = rgb_to_gtk((186,85,211))
 
 class CrucipixelGrid(lw.Widget):
     
@@ -70,7 +73,6 @@ class CrucipixelGrid(lw.Widget):
         self._selection_core_encode = []
         self._cell_function = DefaultDict()
         self._cell_function.default = lambda: "default"
-#         self._cell_function.default = lambda: self.function_color_map["default"]
         self._highlight_row = None
         self._highlight_col = None
         self.core_crucipixel = crucipixel
@@ -81,15 +83,6 @@ class CrucipixelGrid(lw.Widget):
             print(name,value)
         self.register_signal("select_color",handle_select_color)
     
-    def _function_to_color(self,function):
-        return self.function_color_map[function]
-
-    def _color_to_function(self,color):
-        for (f,c) in self.function_color_map.items():
-            if c == color:
-                return f
-        raise KeyError("No function has {} associated".format(color))
-
     @property
     def _selected_function(self):
         return self._selected_function_property 
@@ -125,14 +118,9 @@ class CrucipixelGrid(lw.Widget):
         self.cols = value.cols
         self.update_status_from_crucipixel()
 
-    def _crucipixel_to_color_cell(self,cell):
-        if cell == core.Crucipixel.EMPTY:
-            return self.function_color_map["empty"]
-        elif cell == core.Crucipixel.MAIN_SELECTED:
-            return self.function_color_map["selected"]
-        elif cell == core.Crucipixel.DEFAULT:
-            return self.function_color_map["default"]
-    
+    def _function_to_color(self,function):
+        return self.function_color_map[function]
+
     def _crucipixel_to_function_cell(self,cell):
         if cell == core.Crucipixel.EMPTY:
             return "empty"
@@ -151,27 +139,11 @@ class CrucipixelGrid(lw.Widget):
         elif function == "default":
             return core.Crucipixel.DEFAULT
     
-    def _color_to_crucipixel_cell(self,color):
-        return self._function_to_crucipixel_cell(self._color_to_function(color))
-
-    
     def update_status_from_crucipixel(self):
         for i in range(self.core_crucipixel.rows):
             for j in range(self.core_crucipixel.cols):
                 self._cell_function[i,j] = self._crucipixel_to_function_cell(self._core_crucipixel[i,j])
                 self.invalidate()
-    
-    def _force_update_crucipixel_from_status(self):
-        """ Should never be called, the update should be allowed to 
-            update the core data structure on its own
-        """
-        for i in range(self.rows):
-            update_line = [(i,
-                            j,
-                            self._function_to_crucipixel_cell(self._cell_function[i,j]))\
-                                for j in range(self.cols)]
-            self.core_crucipixel.update(update_line)
-                
     
     def on_draw(self,widget,context):
         
@@ -294,9 +266,6 @@ class CrucipixelGrid(lw.Widget):
         super().on_key_up(w,e)
         if e.key == "r":
             self.update_status_from_crucipixel()
-            return True
-        elif e.key == "f":
-            self._force_update_crucipixel_from_status()
             return True
         try:
             self.selection_style = self.input_selection_style_map[e.key]
