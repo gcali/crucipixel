@@ -21,7 +21,7 @@ _start_empty = rgb_to_gtk((240,255,240))
 _highlight = rgb_to_gtk((0,250,154))
 _highlight = rgb_to_gtk((210,105,30))
 _highlight = rgb_to_gtk((186,85,211))
-_highlight = rgb_to_gtk((95,158,160))
+_highlight = rgb_to_gtk(95,158,160)
 
 class CrucipixelGrid(lw.Widget):
     
@@ -501,7 +501,7 @@ class Guides(lw.Widget):
             self.clip_rectangle = Rectangle(Point(0,0),self.cell_size * len(self.elements)+.5,-self.height)
         else:
             self.clip_rectangle = Rectangle(Point(0,0),-self.width,self.cell_size * len(self.elements)+.5)
-    
+        
     def _update_cell_list(self):
         """Should be called only after on_draw has been called at least once"""
         self._cell_list = []
@@ -564,8 +564,10 @@ class Guides(lw.Widget):
     
 
     def _draw_element(self, context, e):
+        context.save()
         context.move_to(e.cell.start.x, e.cell.start.y)
         context.show_text(e.text)
+        context.restore()
 
     def on_draw(self, widget, context):
         def draw_line(line):
