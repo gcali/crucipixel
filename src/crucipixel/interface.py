@@ -18,9 +18,9 @@ from crucipixel import core
 _start_selected = (.3,.3,.3)
 _start_default = (.8,.8,.8)
 _start_empty = rgb_to_gtk((240,255,240))
-_highlight = rgb_to_gtk((0,250,154))
-_highlight = rgb_to_gtk((210,105,30))
-_highlight = rgb_to_gtk((186,85,211))
+# _highlight = rgb_to_gtk((0,250,154))
+# _highlight = rgb_to_gtk((186,85,211))
+# _highlight = rgb_to_gtk((210,105,30))
 _highlight = rgb_to_gtk(95,158,160)
 
 class CrucipixelGrid(lw.Widget):
