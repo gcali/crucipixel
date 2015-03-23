@@ -579,3 +579,11 @@ class MainWindow(Gtk.Window):
     def start_main(self):
         self.show_all()
         return Gtk.main() 
+
+if __name__ == '__main__':
+    main = MainWindow("Animated donut")
+    root = Root(500,500)
+    donut = Donut(Point(200,200), 50, 150)
+    main.add(root)
+    root.set_child(donut)
+    main.start_main()
