@@ -337,7 +337,9 @@ class CrucipixelGrid(lw.Widget):
             self.is_mouse_down = False
             self._selection_backup = []
             if self.core_crucipixel:
-                self.core_crucipixel.update(self._selection_core_encode)
+                (rows,cols) = self.core_crucipixel.update(self._selection_core_encode)
+                self.broadcast_lw_signal("activate-hor-status",rows)
+                self.broadcast_lw_signal("activate-ver-status",cols)
             self._selection_core_encode = []
         self.is_dragging = False
         return False
@@ -497,10 +499,6 @@ class Guides(lw.Widget):
             for position,e in enumerate(line):
                 new_e = GuideElement(coordinates=(line_index,position),
                                      value=e)
-                if line_index == 1:
-                    new_e.wrong = True
-                elif line_index == 4:
-                    new_e.done = True
                 new_line.append(new_e)
             new_elements.append(new_line)
         return new_elements
@@ -519,6 +517,26 @@ class Guides(lw.Widget):
         self._number_width = None
         self._cell_list_to_update = True
         self._cell_list = []
+        def change_status(line,status,value):
+            if status == "wrong":
+                for e in self.elements[line]:
+                    e.wrong = value
+            elif status == "done":
+                for e in self.elements[line]:
+                    e.done = value
+        def activate_status(status_line:"[(status,line)]"):
+            for line in self.elements:
+                for e in line:
+                    e.wrong = False
+                    e.done = False
+            for (status,line) in status_line:
+                change_status(line,status,True)
+            self.invalidate()
+        if self.orientation == Guides.HORIZONTAL:
+            self.register_signal("activate-hor-status", activate_status)
+        else:
+            self.register_signal("activate-ver-status", activate_status)
+
         if self.orientation == Guides.HORIZONTAL:
             self.clip_rectangle = Rectangle(Point(0,0),self.cell_size * len(self.elements)+.5,-self.height)
         else:
@@ -541,7 +559,7 @@ class Guides(lw.Widget):
             elif self.orientation == Guides.VERTICAL:
                 next_x = line[0].x - self.font_size//2
                 next_y = line[0].y - self.font_size//2
-            for element in element_list:
+            for element in reversed(element_list):
                 text = str(element.value)
                 if self.orientation == Guides.HORIZONTAL:
                     width = self._number_width * len(text)
@@ -576,14 +594,9 @@ class Guides(lw.Widget):
         for line in self.elements:
             for e in line:
                 if e.wide_cell.is_point_in(p):
-                    print("I was in!")
-                    print("Old value: {}".format(e.cancelled))
                     e.cancelled = not e.cancelled
                     self.invalidate()
                     return True
-                elif e.coordinates == (0,0):
-                    print("I wasn't in, why?")
-                    print(e.wide_cell)
 
     def _line_coordinates(self,line_index):
         if self.orientation == Guides.HORIZONTAL:
@@ -608,11 +621,11 @@ class Guides(lw.Widget):
             context.set_source_rgb(*self.color_map["cancelled"])
         context.move_to(e.cell.start.x, e.cell.start.y)
         context.show_text(e.text)
-        if e.cancelled:
-            context.move_to(e.cell.start.x-1,e.cell.start.y)
-            context.line_to(e.cell.start.x + e.cell.width + 1,
-                            e.cell.start.y + e.cell.height+1)
-            context.stroke()
+#         if e.cancelled:
+#             context.move_to(e.cell.start.x-1,e.cell.start.y)
+#             context.line_to(e.cell.start.x + e.cell.width + 1,
+#                             e.cell.start.y + e.cell.height+1)
+#             context.stroke()
         context.restore()
 
     def on_draw(self, widget, context):
@@ -666,14 +679,14 @@ class CompleteCrucipixel(lw.UncheckedContainer):
         self.add(self.grid)
 
         self.horizontal_guide = Guides(start=Point(0,0),
-                                       elements=crucipixel.col_guides,
+                                       elements=crucipixel.row_guides,
                                        size=cell_size,
                                        orientation=Guides.HORIZONTAL)
         self.horizontal_guide.ID="Horizontal Guide"
         self.add(self.horizontal_guide)
         
         self.vertical_guide=Guides(start=Point(0,0),
-                                   elements=crucipixel.row_guides,
+                                   elements=crucipixel.col_guides,
                                    size=cell_size,
                                    orientation=Guides.VERTICAL)
         self.vertical_guide.ID="Vertical Guide"
@@ -757,13 +770,11 @@ if __name__ == '__main__':
     root = lw.Root(500,500)
     main_area = MainArea()
     root.set_child(main_area)
-    hor_elements = "1,2;12,2;3;4;5"
-    ver_elements = "1,2;2,12;3;4;5"
-    cruci = core.Crucipixel.guides_from_strings(5, 5, hor_elements, ver_elements)
-    for i in range(5):
-        for j in range(5):
-            if i >= (4-j):
-                cruci[i,j] = core.Crucipixel.MAIN_SELECTED
+    hor_elements = "2,1;2,2;3;4;5"
+    ver_elements = "2,1;2,2;3;4;5"
+#     cruci = core.Crucipixel.guides_from_strings(5, 5, hor_elements, ver_elements)
+    with open("test.tmp","r") as f:
+        cruci = core.Crucipixel.guides_from_file(f)
     main_area.start_crucipixel(cruci)
     main_area.start_selector()
 
