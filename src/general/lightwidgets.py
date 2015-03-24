@@ -11,6 +11,7 @@ from math import pi,sqrt
 from general.geometry import Point, Rectangle
 from _operator import pos 
 from gi.overrides.Gdk import Gdk
+from general.animator import Animator, Slide
 
 def _transform_mouse_event(event_type,e,w):
     x,y=w.toWidgetCoords.transform_point(e.x,e.y)
@@ -408,7 +409,7 @@ class Donut(Widget):
     def on_mouse_move(self,w,e):
         if self.selected:
             self.centerP =  Point(e.x,e.y) - self._deltaP
-            w.queue_draw()
+            w.invalidate()
         return True
 
 class Container(Widget):
@@ -582,8 +583,32 @@ class MainWindow(Gtk.Window):
 
 if __name__ == '__main__':
     main = MainWindow("Animated donut")
-    root = Root(500,500)
+    root = Root(600,600)
     donut = Donut(Point(200,200), 50, 150)
+    donut_b = Donut(Point(300,300), 50, 150)
     main.add(root)
-    root.set_child(donut)
+    cont = UncheckedContainer()
+    cont.add(donut)
+#     cont.add(donut_b)
+    root.set_child(cont)
+    animator = Animator(interval=1)
+    animator = Animator(widget=root)
+    start_point = Point(50,50)
+    end_point = Point(350,350)
+    speed = Point(200,200)
+    duration = 2
+    pos = start_point
+    def assign(p):
+        global pos
+        delta_point = p - pos
+        print(p)
+        donut.centerP = delta_point
+        pos = p
+    animation = Slide(duration,
+                      start_point,
+                      end_point,
+                      speed,
+                      assign)
+    animator.add_animation(animation)
+    animator.start() 
     main.start_main()
