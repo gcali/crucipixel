@@ -9,12 +9,21 @@ from general.geometry import Point
 
 class Animator:
     
-    def __init__(self,interval=.025,widget=None):
+    def __init__(self,interval=.01,widget=None):
         self.interval = interval
         self._animations = []
         self._lock = Lock()
         self._task_arrived = Condition(self._lock)
-        self._widget = widget
+        if widget:
+            self._widgets = [widget]
+        else:
+            self._widgets = []
+            
+    def add_widget(self, widget):
+        self._widgets.append(widget)
+        
+    def remove_widget(self, widget):
+        self._widgets.remove(widget)
         
     def start(self):
         self._thread = Thread(target=self,name="animator-thread",daemon=True)
@@ -42,8 +51,8 @@ class Animator:
                 for animation in self._animations:
                     if self._manage_animation(animation):
                         new_animations.append(animation)
-                if self._widget:
-                    self._widget.invalidate()
+                for w in self._widgets:
+                    w.invalidate()
                 self._animations = new_animations
                 time.sleep(self.interval) 
     
@@ -99,10 +108,11 @@ class Slide(Animation):
     def step(self, next_time:"fractional seconds"):
         def calc_pos(start,speed,acc,duration):
             return start + duration*(speed + duration*(acc/2))
+        retval = True
         current_t = next_time - self.start_time
         if current_t >= self._duration:
-#             self._assign(self._end_point)
-            return False
+            current_t = self._duration
+            retval = False
         current_point = Point(calc_pos(self._start_point.x,
                                        self._speed.x,
                                        self._acc.x,
@@ -115,7 +125,7 @@ class Slide(Animation):
         if self._end_point.x - current_point.x < 0:
             print(current_t)
         self._assign(current_point)
-        return True
+        return retval
 
     
 if __name__ == '__main__':
@@ -134,6 +144,6 @@ if __name__ == '__main__':
     animator = Animator()
     animator.add_animation(animation)
     animator.start()
-    time.sleep(4)
+    time.sleep(duration+.1)
     data = ["{{{},{}}}".format(p.x,p.y) for p in data]
     print("[" + ",".join(data) + "]")
