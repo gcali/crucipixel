@@ -83,24 +83,19 @@ class Slide(Animation):
                 return 1
             else:
                 return 0 
-#         def calc_acc(end,start,speed,duration):
-#             return (2*(end - start - speed*duration))/(duration*duration)
-        def calc_acc(end,start,speed,duration):
+        def calc_acc(end,speed,duration):
             return -(speed/duration)
         super().__init__(*args,**kwargs)
         self._assign = assign
         self._duration = duration
         self._start_point = start_point
-        self._end_point = end_point
-        x_speed = speed.x * local_cmp(end_point.x, start_point.x)
-        y_speed = speed.y * local_cmp(end_point.y, start_point.y)
-        self._speed = Point(x_speed, y_speed)
-        x_acc = calc_acc(end_point.x,start_point.x,x_speed,duration)
-        y_acc = calc_acc(end_point.y,start_point.y,y_speed,duration)
+        self._speed = speed.copy()
+        x_acc = calc_acc(speed.x,duration)
+        y_acc = calc_acc(speed.y,duration)
         self._acc = Point(x_acc,y_acc)
         print("Start:", start_point.x)
         print("End:", end_point.x)
-        print("Speed:", x_speed)
+        print("Speed:", speed.x)
         print("Acc:", x_acc)
         print("Duration:",duration)
     
@@ -122,8 +117,6 @@ class Slide(Animation):
                                        self._acc.y,
                                        current_t)
                               )
-        if self._end_point.x - current_point.x < 0:
-            print(current_t)
         self._assign(current_point)
         return retval
 
