@@ -23,6 +23,18 @@ _start_empty = rgb_to_gtk((240,255,240))
 # _highlight = rgb_to_gtk((210,105,30))
 _highlight = rgb_to_gtk(95,158,160)
 
+_keys_r = {"up" : ["w","k"],
+          "down" : ["s","j"],
+          "left" : ["a", "h"],
+          "right" : ["d","l"]}
+
+_keys = {}
+for (k,v) in _keys_r.items():
+    for e in v:
+        _keys[e] = k
+del _keys_r 
+
+
 class CrucipixelGrid(lw.Widget):
     
     SELECTION_FREE = 0
@@ -692,6 +704,16 @@ class CompleteCrucipixel(lw.UncheckedContainer):
         self.vertical_guide.ID="Vertical Guide"
         self.add(self.vertical_guide)
         self._current_scale = Point(1,1)
+        self._movement = {}
+        for (key,value) in _keys.items():
+            if value == "left":
+                self._movement[key] = self.move_left
+            elif value == "right":
+                self._movement[key] = self.move_right
+            elif value == "up":
+                self._movement[key] = self.move_up
+            elif value == "down":
+                self._movement[key] = self.move_down
     
     def _update_scale(self):
         self.scale(self._current_scale.x,self._current_scale.y)
@@ -704,6 +726,8 @@ class CompleteCrucipixel(lw.UncheckedContainer):
         elif e.key == "-":
             self.zoom_out()
             return True
+        elif (e.key.isupper()) and e.key.lower() in self._movement:
+            self._movement[e.key.lower()]()
         else:
             super().on_key_down(w,e)
 
@@ -714,6 +738,22 @@ class CompleteCrucipixel(lw.UncheckedContainer):
     def zoom_out(self):
         self.scale((1/1.5),(1/1.5))
         self.invalidate()
+        
+    def move(self,offset_x=0,offset_y=0):
+        self.translate(offset_x,offset_y)
+        self.invalidate()
+    
+    def move_down(self,offset=10):
+        return self.move(offset_y=offset)
+    
+    def move_up(self,offset=10):
+        return self.move(offset_y=-offset)
+    
+    def move_left(self,offset=10):
+        return self.move(offset_x=-offset)
+
+    def move_right(self,offset=10):
+        return self.move(offset_x=offset)
     
     def on_mouse_enter(self):
         super().on_mouse_enter()
