@@ -589,7 +589,6 @@ if __name__ == '__main__':
     main.add(root)
     cont = UncheckedContainer()
     cont.add(donut)
-#     cont.add(donut_b)
     root.set_child(cont)
     animator = Animator(interval=.01,widget=root)
     start_point = Point(50,50)
@@ -600,14 +599,21 @@ if __name__ == '__main__':
     def assign(p):
         global pos
         delta_point = p - pos
-        print(p)
         donut.centerP = delta_point
         pos = p
-    animation = Slide(duration,
-                      start_point,
-                      end_point,
-                      speed,
-                      assign)
+    def clean():
+        global pos
+        print(pos,start_point)
+        new_animation = Slide.calculateAccelerationSpeed(2,
+                                                         pos, 
+                                                         start_point, 
+                                                         assign)
+        animator.add_animation(new_animation)
+    animation = Slide.calculateAcceleration(duration,
+                                            start_point, 
+                                            speed, 
+                                            assign,
+                                            clean)
     animator.add_animation(animation)
     animator.start() 
     main.start_main()

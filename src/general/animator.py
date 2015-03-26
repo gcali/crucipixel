@@ -3,7 +3,7 @@ Created on Mar 23, 2015
 
 @author: giovanni
 '''
-from threading import Lock, Condition, Thread
+from threading import Lock, Condition, Thread, RLock
 import time
 from general.geometry import Point
 
@@ -12,7 +12,7 @@ class Animator:
     def __init__(self,interval=.01,widget=None):
         self.interval = interval
         self._animations = []
-        self._lock = Lock()
+        self._lock = RLock()
         self._task_arrived = Condition(self._lock)
         if widget:
             self._widgets = [widget]
@@ -34,6 +34,7 @@ class Animator:
             animation.start_time = time.perf_counter()
             self._animations.append(animation)
             self._task_arrived.notify(1)
+        print("Animation added")
         
     def _manage_animation(self,animation:"Animation"):
         if animation.stop:
@@ -54,7 +55,7 @@ class Animator:
                 for w in self._widgets:
                     w.invalidate()
                 self._animations = new_animations
-                time.sleep(self.interval) 
+            time.sleep(self.interval) 
     
 class Animation:
     
@@ -68,57 +69,94 @@ class Animation:
     
 class Slide(Animation):
     
+    @classmethod
+    def calculateAcceleration(cls,
+                              duration:"sec",
+                              start_point:"Point",
+                              speed:"Point",
+                              assign:"Point -> ()",
+                              clean:"() -> ()"=None,
+                              **kwargs):
+        def calc_acc(speed,duration):
+            return -(speed/duration)
+        acc = Point(calc_acc(speed.x,duration),
+                    calc_acc(speed.y,duration)
+                    )
+        return cls(duration=duration,
+                   start_point=start_point,
+                   speed=speed,
+                   acc=acc,
+                   assign=assign,
+                   clean=clean,
+                   **kwargs)
+    
+    @classmethod
+    def calculateAccelerationSpeed(cls,
+                                   duration,
+                                   start_point:"Point",
+                                   end_point:"Point",
+                                   assign:"Point -> ()",
+                                   clean:"() -> ()"=None,
+                                   **kwargs):
+        def calc_speed(start,end,duration):
+            return (2*(end - start))/duration
+        speed = Point(calc_speed(start_point.x,
+                                 end_point.x,
+                                 duration),
+                      calc_speed(start_point.y,
+                                 end_point.y,
+                                 duration)
+                      )
+        print(speed)
+        return cls.calculateAcceleration(duration=duration, 
+                                         start_point=start_point, 
+                                         speed=speed, 
+                                         assign=assign,
+                                         clean=clean,
+                                         **kwargs)
+        
+    
     def __init__(self,
                  duration,
                  start_point:"Point",
-                 end_point:"Point",
                  speed:"Point",
+                 acc:"Point",
                  assign:"Point -> ()",
-                 *args,
+                 clean:"() -> ()"=None,
                  **kwargs):
-        def local_cmp(a,b):
-            if a < b:
-                return -1
-            elif a > b:
-                return 1
-            else:
-                return 0 
-        def calc_acc(end,speed,duration):
-            return -(speed/duration)
-        super().__init__(*args,**kwargs)
+        super().__init__(**kwargs)
         self._assign = assign
         self._duration = duration
         self._start_point = start_point
-        self._speed = speed.copy()
-        x_acc = calc_acc(speed.x,duration)
-        y_acc = calc_acc(speed.y,duration)
-        self._acc = Point(x_acc,y_acc)
-        print("Start:", start_point.x)
-        print("End:", end_point.x)
-        print("Speed:", speed.x)
-        print("Acc:", x_acc)
-        print("Duration:",duration)
+        self._speed = speed
+        self._acc = acc
+        self._clean = clean
     
     
     def step(self, next_time:"fractional seconds"):
         def calc_pos(start,speed,acc,duration):
             return start + duration*(speed + duration*(acc/2))
-        retval = True
+        def new_point(time):
+            return Point(calc_pos(self._start_point.x,
+                                  self._speed.x,
+                                  self._acc.x,
+                                  time),
+                         calc_pos(self._start_point.y,
+                                  self._speed.y,
+                                  self._acc.y,
+                                  time)
+                         )
         current_t = next_time - self.start_time
         if current_t >= self._duration:
-            current_t = self._duration
-            retval = False
-        current_point = Point(calc_pos(self._start_point.x,
-                                       self._speed.x,
-                                       self._acc.x,
-                                       current_t),
-                              calc_pos(self._start_point.y,
-                                       self._speed.y,
-                                       self._acc.y,
-                                       current_t)
-                              )
-        self._assign(current_point)
-        return retval
+            current_point = new_point(self._duration)
+            self._assign(current_point)
+            if self._clean:
+                self._clean()
+            return False
+        else:
+            current_point = new_point(current_t)
+            self._assign(current_point)
+            return True
 
     
 if __name__ == '__main__':
