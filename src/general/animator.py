@@ -6,6 +6,8 @@ Created on Mar 23, 2015
 from threading import Lock, Condition, Thread, RLock
 import time
 from general.geometry import Point
+from general.physics import get_speed_from_uniform_acceleration,\
+    get_position_from_uniform_acceleration, get_position_from_uniform_speed
 
 class Animator:
     
@@ -184,8 +186,57 @@ class StopAnimation(Animation):
             return False
         else:
             return True
-        
 
+class AccMovement(Animation):
+    
+    def __init__(self,
+                 assign:"Point(delta) -> ()",
+                 acc:"Point(px/sec^2,px/sec^2)",
+                 start_position:"Point",
+                 duration:"sec",
+                 start_speed:"Point" = Point(0,0),
+                 **kwargs):
+        
+        super().__init__(**kwargs)
+        self._assign = assign
+        self._acc = acc
+        self._duration = duration
+        self._start_speed = start_speed
+        self._start_position = start_position
+        self._last_position = start_position
+        self._max_speed = get_speed_from_uniform_acceleration(self._start_speed,
+                                                              self._acc,
+                                                              self._duration)
+        print(self._max_speed)
+        self._const_speed = False
+    
+    def step(self, next_time:"fractional seconds"):
+        current_t = next_time - self.start_time
+        if not self._const_speed and self._duration > current_t:
+            new_position = get_position_from_uniform_acceleration(self._start_position,
+                                                                  self._start_speed,
+                                                                  self._acc,
+                                                                  current_t)
+#             print((new_position.x-self._last_position.x)/current_t)
+        elif not self._const_speed:
+            new_position = get_position_from_uniform_acceleration(self._start_position,
+                                                                  self._start_speed,
+                                                                  self._acc, 
+                                                                  self._duration)
+            self._start_position = new_position
+            print(new_position)
+            new_position = get_position_from_uniform_speed(new_position,
+                                                           self._max_speed,
+                                                           current_t - self._duration)
+            self._const_speed = True
+        else:
+            new_position = get_position_from_uniform_speed(self._start_position,
+                                                           self._max_speed,
+                                                           current_t - self._duration)
+        delta = new_position - self._last_position
+        self._last_position = new_position
+        self._assign(delta)
+        return True 
     
 if __name__ == '__main__':
     data=[]

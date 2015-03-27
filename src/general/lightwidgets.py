@@ -11,7 +11,7 @@ from math import pi,sqrt
 from general.geometry import Point, Rectangle
 from _operator import pos 
 from gi.overrides.Gdk import Gdk
-from general.animator import Animator, Slide, StopAnimation
+from general.animator import Animator, Slide, StopAnimation, AccMovement
 
 def _transform_mouse_event(event_type,e,w):
     x,y=w.toWidgetCoords.transform_point(e.x,e.y)
@@ -598,29 +598,38 @@ if __name__ == '__main__':
     end_point = Point(350,350)
     speed = Point(200,200)
     duration = 2
-    pos = start_point
-    def assign(p):
-        global pos
-        delta_point = p - pos
-        donut.centerP = delta_point
-        pos = p
-    def clean():
-        global pos
-        print(pos,start_point)
-        new_animation = Slide.calculateAccelerationSpeed(2,
-                                                         pos, 
-                                                         start_point, 
-                                                         assign)
-        new_animation.widget = donut
-        animator.add_animation(new_animation)
-    animation = Slide.calculateAcceleration(duration,
-                                            start_point, 
-                                            speed, 
-                                            assign,
-                                            clean)
-    animation_stop = StopAnimation(animation=animation,time_offset=1)
+#     pos = start_point
+#     def assign(p):
+#         global pos
+#         delta_point = p - pos
+#         donut.centerP = delta_point
+#         pos = p
+#     def clean():
+#         global pos
+#         print(pos,start_point)
+#         new_animation = Slide.calculateAccelerationSpeed(2,
+#                                                          pos, 
+#                                                          start_point, 
+#                                                          assign)
+#         new_animation.widget = donut
+#         animator.add_animation(new_animation)
+#     animation = Slide.calculateAcceleration(duration,
+#                                             start_point, 
+#                                             speed, 
+#                                             assign,
+#                                             clean)
+#     animation_stop = StopAnimation(animation=animation,time_offset=1)
+#     animation.widget = donut
+#     animator.add_animation(animation)
+#     animator.add_animation(animation_stop)
+    def assign(d):
+        donut.centerP = d
+    animation = AccMovement(assign=assign,
+                            start_position=Point(0,0),
+                            duration=2,
+                            acc=Point(100,100),
+                            start_speed=Point(0,0))
     animation.widget = donut
     animator.add_animation(animation)
-#     animator.add_animation(animation_stop)
     animator.start() 
     main.start_main()

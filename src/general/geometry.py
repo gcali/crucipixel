@@ -3,6 +3,7 @@ Created on Feb 19, 2015
 
 @author: giovanni
 '''
+import math
 
 class Point:
     
@@ -19,6 +20,10 @@ class Point:
     @property
     def row(self):
         return self.y 
+    
+    @property
+    def norm(self):
+        return math.sqrt(self.x*self.x + self.y*self.y)
     
     def copy(self):
         return Point(self.x,self.y)
