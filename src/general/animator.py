@@ -12,7 +12,7 @@ class Animator:
     def __init__(self,interval=.01,widget=None):
         self.interval = interval
         self._animations = []
-        self._lock = RLock()
+        self._lock = Lock()
         self._task_arrived = Condition(self._lock)
         if widget:
             self._widgets = [widget]
@@ -48,20 +48,32 @@ class Animator:
             with self._lock:
                 while not self._animations:
                     self._task_arrived.wait(None)
-                new_animations = []
-                for animation in self._animations:
-                    if self._manage_animation(animation):
-                        new_animations.append(animation)
-                for w in self._widgets:
-                    w.invalidate()
-                self._animations = new_animations
+                current_animations = list(self._animations)
+                self._animations = []
+            widgets_to_update = set()
+            new_animations = []
+            for animation in current_animations:
+                if animation.widget:
+                    widgets_to_update.add(animation.widget)
+                if self._manage_animation(animation):
+                    new_animations.append(animation)
+                elif animation.clean:
+                    animation.clean()
+            for w in widgets_to_update:
+                w.invalidate()
+            for w in self._widgets:
+                w.invalidate()
+            with self._lock:
+                self._animations = self._animations + new_animations
             time.sleep(self.interval) 
     
 class Animation:
     
-    def __init__(self):
+    def __init__(self, clean=None):
         self.stop = False
         self.start_time = None
+        self.widget = None
+        self.clean = clean
     
     def step(self, next_time:"fractional seconds"):
         raise NotImplementedError
@@ -96,7 +108,6 @@ class Slide(Animation):
                                    start_point:"Point",
                                    end_point:"Point",
                                    assign:"Point -> ()",
-                                   clean:"() -> ()"=None,
                                    **kwargs):
         def calc_speed(start,end,duration):
             return (2*(end - start))/duration
@@ -112,7 +123,6 @@ class Slide(Animation):
                                          start_point=start_point, 
                                          speed=speed, 
                                          assign=assign,
-                                         clean=clean,
                                          **kwargs)
         
     
@@ -122,7 +132,6 @@ class Slide(Animation):
                  speed:"Point",
                  acc:"Point",
                  assign:"Point -> ()",
-                 clean:"() -> ()"=None,
                  **kwargs):
         super().__init__(**kwargs)
         self._assign = assign
@@ -130,10 +139,11 @@ class Slide(Animation):
         self._start_point = start_point
         self._speed = speed
         self._acc = acc
-        self._clean = clean
     
     
     def step(self, next_time:"fractional seconds"):
+        if self.stop:
+            return False
         def calc_pos(start,speed,acc,duration):
             return start + duration*(speed + duration*(acc/2))
         def new_point(time):
@@ -150,13 +160,31 @@ class Slide(Animation):
         if current_t >= self._duration:
             current_point = new_point(self._duration)
             self._assign(current_point)
-            if self._clean:
-                self._clean()
             return False
         else:
             current_point = new_point(current_t)
             self._assign(current_point)
             return True
+
+class StopAnimation(Animation):
+    
+    def __init__(self,
+                 animation,
+                 time_offset,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.animation = animation
+        self.time_offset = time_offset
+    
+    def step(self, next_time:"fractional seconds"):
+        current_t = next_time - self.start_time 
+        if current_t >= self.time_offset:
+            print("Got here!")
+            self.animation.stop = True
+            return False
+        else:
+            return True
+        
 
     
 if __name__ == '__main__':
