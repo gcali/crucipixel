@@ -19,24 +19,21 @@ from general.animator import Animator, AccMovement
 _start_selected = (.3,.3,.3)
 _start_default = (.8,.8,.8)
 _start_empty = rgb_to_gtk((240,255,240))
-# _highlight = rgb_to_gtk((0,250,154))
-# _highlight = rgb_to_gtk((186,85,211))
-# _highlight = rgb_to_gtk((210,105,30))
 _highlight = rgb_to_gtk(95,158,160)
 
-_keys_r = {"up" : ["w","k"],
-          "down" : ["s","j"],
-          "left" : ["a", "h"],
-          "right" : ["d","l"],
+_keys_r = {"up" : ["w","k", "up"],
+          "down" : ["s","j", "down"],
+          "left" : ["a", "h", "left"],
+          "right" : ["d","l", "right"],
           "up_left" : ["y","q"],
           "down_left" : ["b","z"],
           "up_right" : ["u","e"],
           "down_right" : ["n","c"]}
 
-_keys = {}
+_global_movement_keys = {}
 for (k,v) in _keys_r.items():
     for e in v:
-        _keys[e] = k
+        _global_movement_keys[e] = k
 del _keys_r 
 
 global_animator = Animator() 
@@ -97,10 +94,7 @@ class CrucipixelGrid(lw.Widget):
         self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+1,self._total_width+1)
         self.should_drag = False
         self.is_dragging = False
-        self._movement_keys = _keys
-#         self._selection_keys_r = {"selected" : 
-#         self._selection_keys = {
-
+        self._movement_keys = _global_movement_keys
         def handle_select_color(name,value):
             self.input_function_map[name] = value
             print(name,value)
@@ -748,7 +742,7 @@ class CompleteCrucipixel(lw.UncheckedContainer):
         self._init_guides(crucipixel)
         self._current_scale = Point(1,1)
         self._direction_animations = {}
-        self._movement = dict(_keys)
+        self._movement = dict(_global_movement_keys)
 
     def _update_scale(self):
         self.scale(self._current_scale.x,self._current_scale.y)
