@@ -36,7 +36,6 @@ class Animator:
             animation.start_time = time.perf_counter()
             self._animations.append(animation)
             self._task_arrived.notify(1)
-        print("Animation added")
         
     def _manage_animation(self,animation:"Animation"):
         if animation.stop:
@@ -120,7 +119,6 @@ class Slide(Animation):
                                  end_point.y,
                                  duration)
                       )
-        print(speed)
         return cls.calculateAcceleration(duration=duration, 
                                          start_point=start_point, 
                                          speed=speed, 
@@ -181,7 +179,6 @@ class StopAnimation(Animation):
     def step(self, next_time:"fractional seconds"):
         current_t = next_time - self.start_time 
         if current_t >= self.time_offset:
-            print("Got here!")
             self.animation.stop = True
             return False
         else:
@@ -207,7 +204,6 @@ class AccMovement(Animation):
         self._max_speed = get_speed_from_uniform_acceleration(self._start_speed,
                                                               self._acc,
                                                               self._duration)
-        print(self._max_speed)
         self._const_speed = False
     
     def step(self, next_time:"fractional seconds"):
@@ -217,14 +213,12 @@ class AccMovement(Animation):
                                                                   self._start_speed,
                                                                   self._acc,
                                                                   current_t)
-#             print((new_position.x-self._last_position.x)/current_t)
         elif not self._const_speed:
             new_position = get_position_from_uniform_acceleration(self._start_position,
                                                                   self._start_speed,
                                                                   self._acc, 
                                                                   self._duration)
             self._start_position = new_position
-            print(new_position)
             new_position = get_position_from_uniform_speed(new_position,
                                                            self._max_speed,
                                                            current_t - self._duration)
