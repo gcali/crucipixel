@@ -64,7 +64,8 @@ def _transform_keyboard_event(event_type,e):
                   Gdk.KEY_Down : "down",
                   Gdk.KEY_Up : "up",
                   Gdk.KEY_Left : "left",
-                  Gdk.KEY_Right : "right"}
+                  Gdk.KEY_Right : "right",
+                  Gdk.KEY_space : "space"}
     if e.keyval in control_keys:
         key = control_keys[e.keyval]
     else:
