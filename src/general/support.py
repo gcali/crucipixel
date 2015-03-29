@@ -75,6 +75,13 @@ def clamp(value:"num",min_v:"num",max_v:"num") -> "num":
         return max_v
     else:
         return value
+
+#Code from
+#http://code.activestate.com/recipes/52308-the-simple-but-handy-collector-of-a-bunch-of-named/
+class Bunch:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
    
 if __name__ == '__main__':
     d = DefaultDict()

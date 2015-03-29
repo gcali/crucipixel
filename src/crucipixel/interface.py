@@ -10,10 +10,11 @@ from gi.repository import Gtk,Gdk
 from general.geometry import Point, Rectangle
 import general.lightwidgets as lw
 from general.support import get_from_to_inclusive, DefaultDict, clamp,\
-                            rgb_to_gtk
+                            rgb_to_gtk, Bunch
 from collections import OrderedDict
 from general.lightwidgets import MouseEvent
 from crucipixel import core
+from general.animator import Animator, AccMovement
 
 _start_selected = (.3,.3,.3)
 _start_default = (.8,.8,.8)
@@ -26,7 +27,11 @@ _highlight = rgb_to_gtk(95,158,160)
 _keys_r = {"up" : ["w","k"],
           "down" : ["s","j"],
           "left" : ["a", "h"],
-          "right" : ["d","l"]}
+          "right" : ["d","l"],
+          "up_left" : ["y","q"],
+          "down_left" : ["b","z"],
+          "up_right" : ["u","e"],
+          "down_right" : ["n","c"]}
 
 _keys = {}
 for (k,v) in _keys_r.items():
@@ -34,6 +39,7 @@ for (k,v) in _keys_r.items():
         _keys[e] = k
 del _keys_r 
 
+global_animator = Animator() 
 
 class CrucipixelGrid(lw.Widget):
     
@@ -91,6 +97,9 @@ class CrucipixelGrid(lw.Widget):
         self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+1,self._total_width+1)
         self.should_drag = False
         self.is_dragging = False
+        self._movement_keys = _keys
+#         self._selection_keys_r = {"selected" : 
+#         self._selection_keys = {
 
         def handle_select_color(name,value):
             self.input_function_map[name] = value
@@ -300,10 +309,47 @@ class CrucipixelGrid(lw.Widget):
 
     def on_key_down(self, w, e):
         super().on_key_down(w,e)
+        print(e.key)
         if e.key == "ctrl_l":
             self.should_drag = True
             return True
+        elif e.key in self._movement_keys:
+            self._handle_hover_movement(self._movement_keys[e.key])
+            return True
+#         elif e.key in self._selection_keys:
+#             self._handle_selection_key(self._selection_keys[e.key])
         return False
+    
+    def _handle_hover_movement(self,direction:"str"):
+        def get_movement(direction):
+            if direction == "down":
+                movement = Point(0,1)
+            elif direction == "up":
+                movement = Point(0,-1)
+            elif direction == "left":
+                movement = Point(-1,0)
+            elif direction == "right":
+                movement = Point(1,0)
+            else:
+                raise NameError("Couldn't find direction {}".format(direction))
+            return movement
+        movement = Point(0,0)
+        for d in direction.split("_"):
+            movement += get_movement(d) 
+        curr_row,curr_col = self._highlight_row, self._highlight_col
+        if curr_row is None:
+            self._highlight_row = 0
+        else:
+            self._highlight_row = clamp(self._highlight_row + movement.row, 
+                                        0, 
+                                        self.rows-1)
+        if curr_col is None:
+            self._highlight_col = 0
+        else:
+            self._highlight_col = clamp(self._highlight_col + movement.col,
+                                        0,
+                                        self.cols-1)
+        self.invalidate()
         
     def _restore_selection(self):
         for row, col, color in self._selection_backup:
@@ -633,11 +679,6 @@ class Guides(lw.Widget):
             context.set_source_rgb(*self.color_map["cancelled"])
         context.move_to(e.cell.start.x, e.cell.start.y)
         context.show_text(e.text)
-#         if e.cancelled:
-#             context.move_to(e.cell.start.x-1,e.cell.start.y)
-#             context.line_to(e.cell.start.x + e.cell.width + 1,
-#                             e.cell.start.y + e.cell.height+1)
-#             context.stroke()
         context.restore()
 
     def on_draw(self, widget, context):
@@ -674,6 +715,20 @@ class Guides(lw.Widget):
 
 class CompleteCrucipixel(lw.UncheckedContainer):
     
+
+    def _init_guides(self, crucipixel):
+        self.horizontal_guide = Guides(start=Point(0, 0), elements=crucipixel.row_guides, 
+            size=self.cell_size, 
+            orientation=Guides.HORIZONTAL)
+        self.horizontal_guide.ID = "Horizontal Guide"
+        self.vertical_guide = Guides(start=Point(0, 0), 
+            elements=crucipixel.col_guides, 
+            size=self.cell_size, 
+            orientation=Guides.VERTICAL)
+        self.vertical_guide.ID = "Vertical Guide"
+        self.add(self.horizontal_guide)
+        self.add(self.vertical_guide)
+
     def __init__(self,
                  crucipixel,
                  start=Point(0,0),
@@ -690,31 +745,11 @@ class CompleteCrucipixel(lw.UncheckedContainer):
         self.grid.selection_style = CrucipixelGrid.SELECTION_RECTANGLE
         self.add(self.grid)
 
-        self.horizontal_guide = Guides(start=Point(0,0),
-                                       elements=crucipixel.row_guides,
-                                       size=cell_size,
-                                       orientation=Guides.HORIZONTAL)
-        self.horizontal_guide.ID="Horizontal Guide"
-        self.add(self.horizontal_guide)
-        
-        self.vertical_guide=Guides(start=Point(0,0),
-                                   elements=crucipixel.col_guides,
-                                   size=cell_size,
-                                   orientation=Guides.VERTICAL)
-        self.vertical_guide.ID="Vertical Guide"
-        self.add(self.vertical_guide)
+        self._init_guides(crucipixel)
         self._current_scale = Point(1,1)
-        self._movement = {}
-        for (key,value) in _keys.items():
-            if value == "left":
-                self._movement[key] = self.move_left
-            elif value == "right":
-                self._movement[key] = self.move_right
-            elif value == "up":
-                self._movement[key] = self.move_up
-            elif value == "down":
-                self._movement[key] = self.move_down
-    
+        self._direction_animations = {}
+        self._movement = dict(_keys)
+
     def _update_scale(self):
         self.scale(self._current_scale.x,self._current_scale.y)
         self.invalidate()
@@ -726,10 +761,19 @@ class CompleteCrucipixel(lw.UncheckedContainer):
         elif e.key == "-":
             self.zoom_out()
             return True
-        elif (e.key.isupper()) and e.key.lower() in self._movement:
-            self._movement[e.key.lower()]()
+        elif e.key in self._movement and "shift" in e.modifiers:
+            self._handle_movement(self._movement[e.key])
         else:
             super().on_key_down(w,e)
+    
+    def on_key_up(self, w, e):
+        if e.key in self._movement and "shift" in e.modifiers:
+            self._stop_movement(self._movement[e.key])
+        elif e.key.startswith("shift"):
+            for m in self._movement.values():
+                self._stop_movement(m)
+        else:
+            return super().on_key_up(w,e)
 
     def zoom_in(self):
         self.scale(1.5,1.5)
@@ -738,7 +782,52 @@ class CompleteCrucipixel(lw.UncheckedContainer):
     def zoom_out(self):
         self.scale((1/1.5),(1/1.5))
         self.invalidate()
-        
+    
+    def _handle_movement(self,direction:"str"):
+        def get_direction(direction):
+            if direction == "left":
+                coeff = Point(-1,0)
+            elif direction == "right":
+                coeff = Point(1,0)
+            elif direction == "up":
+                coeff = Point(0,-1)
+            elif direction == "down":
+                coeff = Point(0,1)
+            else:
+                raise NameError("Can't find direction", direction)
+            return coeff
+        if direction not in self._direction_animations:
+            coeff = Point(0,0)
+            for d in direction.split("_"):
+                coeff += get_direction(d)
+#             acc = Point(500 * coeff.x,
+#                         500 * coeff.y)
+            acc = Point(0,0)
+            start_speed = Point(500 * coeff.x,
+                                500 * coeff.y)
+            store_pos = Bunch(v=Point(0,0))
+            def assign(d):
+                store_pos.v += d
+                delta = Point(int(store_pos.v.x),
+                              int(store_pos.v.y))
+                store_pos.v -= delta
+                self.translate(delta.x, delta.y)
+            animation = AccMovement(assign=assign, 
+                                    acc=acc, 
+                                    start_position=Point(0,0), 
+                                    duration=0, 
+                                    start_speed=start_speed)
+            animation.widget = self
+            self._direction_animations[direction] = animation
+            global_animator.add_animation(animation)
+    
+    def _stop_movement(self,direction:"str"):
+        try:
+            self._direction_animations[direction].stop = True
+            del self._direction_animations[direction]
+        except KeyError:
+            pass
+
     def move(self,offset_x=0,offset_y=0):
         self.translate(offset_x,offset_y)
         self.invalidate()
@@ -820,4 +909,5 @@ if __name__ == '__main__':
 
     win.add(root)
     root.grab_focus()
+    global_animator.start()
     win.start_main()
