@@ -95,6 +95,15 @@ class CrucipixelGrid(lw.Widget):
         self.should_drag = False
         self.is_dragging = False
         self._movement_keys = _global_movement_keys
+        reversed_selection_keys = {
+            "selected" : ["space","i"],
+            "default" : ["p", "backspace"],
+            "empty" : ["x", "o"]
+        }
+        self._selection_keys = {}
+        for (f,l) in reversed_selection_keys.items():
+            for k in l:
+                self._selection_keys[k] = f
         def handle_select_color(name,value):
             self.input_function_map[name] = value
             print(name,value)
@@ -780,13 +789,13 @@ class CompleteCrucipixel(lw.UncheckedContainer):
     def _handle_movement(self,direction:"str"):
         def get_direction(direction):
             if direction == "left":
-                coeff = Point(-1,0)
-            elif direction == "right":
                 coeff = Point(1,0)
+            elif direction == "right":
+                coeff = Point(-1,0)
             elif direction == "up":
-                coeff = Point(0,-1)
-            elif direction == "down":
                 coeff = Point(0,1)
+            elif direction == "down":
+                coeff = Point(0,-1)
             else:
                 raise NameError("Can't find direction", direction)
             return coeff
@@ -893,8 +902,8 @@ if __name__ == '__main__':
     root = lw.Root(500,500)
     main_area = MainArea()
     root.set_child(main_area)
-    hor_elements = "2,1;2,2;3;4;5"
-    ver_elements = "2,1;2,2;3;4;5"
+#     hor_elements = "2,1;2,2;3;4;5"
+#     ver_elements = "2,1;2,2;3;4;5"
 #     cruci = core.Crucipixel.guides_from_strings(5, 5, hor_elements, ver_elements)
     with open("test.tmp","r") as f:
         cruci = core.Crucipixel.guides_from_file(f)
