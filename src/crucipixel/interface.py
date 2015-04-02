@@ -67,7 +67,8 @@ class CrucipixelGrid(lw.Widget):
         self.rows=rows
         self.cell_width=width
         self.cell_height=height
-        self.is_selection_on = False
+        self.is_mouse_selection_on = False
+        self.is_keyboard_selection_on = False
         
         self.input_function_map = {"left" : "selected",
                                    "right" : "empty",
@@ -281,29 +282,62 @@ class CrucipixelGrid(lw.Widget):
         super().on_key_up(w,e)
         if e.key == "ctrl_l":
             self.should_drag = False
-#             return True
         elif e.key == "r":
             self.update_status_from_crucipixel()
-#             return True
+        elif e.key in self._selection_keys and self.is_keyboard_selection_on:
+            self._handle_key_selection_end()
+            self.is_keyboard_selection_on = False
         else:
             try:
                 self.selection_style = self.input_selection_style_map[e.key]
             except KeyError:
                 pass
         return False
-
+    
     def on_key_down(self, w, e):
         super().on_key_down(w,e)
-        print(e.key)
+#         print(e.key)
         if e.key == "ctrl_l":
             self.should_drag = True
+            print("Should drag?")
             return True
         elif e.key in self._movement_keys:
             self._handle_hover_movement(self._movement_keys[e.key])
+            if self.is_keyboard_selection_on:
+                self._handle_key_selection_move(self._movement_keys[e.key])
+            self.invalidate()
             return True
-#         elif e.key in self._selection_keys:
-#             self._handle_selection_key(self._selection_keys[e.key])
+        elif e.key in self._selection_keys and not self.is_keyboard_selection_on:
+            if self.is_mouse_selection_on:
+                self.is_mouse_selection_on = False
+                self._selection_end()
+            self.is_keyboard_selection_on = True
+            self._handle_key_selection_start(self._selection_keys[e.key])
+            self.invalidate()
         return False
+    
+    def _handle_key_selection_start(self, function):
+        if self.is_mouse_selection_on:
+            self._selection_end()
+        if self._highlight_col is None:
+            col = 0
+        else:
+            col = self._highlight_col
+        if self._highlight_row is None:
+            row = 0
+        else:
+            row = self._highlight_row
+        start_point = Point(col,row)
+        self._selection_start(start_point, function)
+    
+    def _handle_key_selection_move(self, direction):
+        col = self._highlight_col if not self._highlight_col is None else 0
+        row = self._highlight_row if not self._highlight_row is None else 0
+        self._selection_move(Point(col,row))
+
+    def _handle_key_selection_end(self):
+        self._selection_end()
+
     
     def _handle_hover_movement(self,direction:"str"):
         def get_movement(direction):
@@ -334,7 +368,6 @@ class CrucipixelGrid(lw.Widget):
             self._highlight_col = clamp(self._highlight_col + movement.col,
                                         0,
                                         self.cols-1)
-        self.invalidate()
         
     def _restore_selection(self):
         for row, col, color in self._selection_backup:
@@ -349,22 +382,29 @@ class CrucipixelGrid(lw.Widget):
                 self._selection_core_encode.append((c,r,self._selected_core_function))
 
     def _selection_start(self, start_point, selected_function):
-        self.is_selection_on = True
+        self.is_mouse_selection_on = True
         self._selection_start_point = start_point
         self._selected_function = selected_function
         self._select_rectangle(start_point.col, start_point.row)
 
     def on_mouse_down(self, w, e):
-        if not self.should_drag and self.is_point_in(Point(e.x,e.y)):
+        point_in = self.is_point_in(Point(e.x,e.y))
+        if (not self.should_drag) and\
+           (not self.is_keyboard_selection_on) and\
+           point_in:
             start_point = Point(self._get_cell_id(e))
             selected_function = self.input_function_map[e.button]
-            self.is_selection_on = True
+            self.is_mouse_selection_on = True
             self._selection_start(start_point, selected_function)
             self.invalidate()
             return True
         else:
-            self.is_dragging = True
-            return False
+            if self.should_drag or\
+               not point_in:
+                self.is_dragging = True
+                return False
+            else:
+                return False
     
     def on_mouse_exit(self):
         super().on_mouse_exit()
@@ -391,13 +431,14 @@ class CrucipixelGrid(lw.Widget):
 
     def on_mouse_move(self, w, e):
         if self.is_dragging:
+            print("I'm dragging!")
             return False
         x = clamp(e.x,0,self._total_width-1)
         y = clamp(e.y,0,self._total_height-1)
         cell_col,cell_row = self._get_cell_id(Point(x,y))
         self.highlight_hover(cell_row,cell_col)
         selection_pos = Point(cell_col,cell_row)
-        if self.is_selection_on:
+        if self.is_mouse_selection_on:
             self._selection_move(selection_pos) 
         self.invalidate()
         return False
@@ -406,21 +447,21 @@ class CrucipixelGrid(lw.Widget):
     def _selection_end(self):
         self._selection_backup = []
         if self.core_crucipixel:
-            self.is_selection_on = False
+            self.is_mouse_selection_on = False
             rows, cols = self.core_crucipixel.update(self._selection_core_encode)
             self.broadcast_lw_signal("activate-hor-status", rows)
             self.broadcast_lw_signal("activate-ver-status", cols)
         self._selection_core_encode = []
 
     def on_mouse_up(self, w, e):
-        if self.is_selection_on:
-            self.is_selection_on = False
+        if self.is_mouse_selection_on:
+            self.is_mouse_selection_on = False
             self._selection_end()
         self.is_dragging = False
         return False
     
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
-        if category == MouseEvent.MOUSE_MOVE and self.is_selection_on:
+        if category == MouseEvent.MOUSE_MOVE and self.is_mouse_selection_on:
             return True
         else:
             return super().is_point_in(p,category)
