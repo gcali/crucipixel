@@ -16,10 +16,20 @@ from general.lightwidgets import MouseEvent
 from crucipixel import core
 from general.animator import Animator, AccMovement
 
+def gdk_color(*args):
+    if len(args) == 1:
+        r,g,b = args[0]
+    else:
+        r,g,b = args
+    return Gdk.Color.from_floats(r, g, b)
+
 _start_selected = (.3,.3,.3)
+_start_default = rgb_to_gtk(25,25,112)
 _start_default = (.8,.8,.8)
+_start_selected = rgb_to_gtk(72,61,139)
 _start_empty = rgb_to_gtk((240,255,240))
 _highlight = rgb_to_gtk(95,158,160)
+_highlight = rgb_to_gtk(255,255,0)
 
 _keys_r = {"up" : ["w","k", "up"],
           "down" : ["s","j", "down"],
@@ -230,12 +240,16 @@ class CrucipixelGrid(lw.Widget):
                 context.stroke()
                 
 
-        for (k,v) in self._cell_function.items():
-            rectangle = Rectangle(Point(k[0] * self.cell_width,
-                                        k[1] * self.cell_height),
-                                  self.cell_width,
-                                  self.cell_height)
-            draw_cell(v,rectangle)
+#         for (k,v) in self._cell_function.items():
+        for col in range(self.cols):
+            for row in range(self.rows):
+                k = (col,row)
+                v = self._cell_function[k]
+                rectangle = Rectangle(Point(k[0] * self.cell_width,
+                                            k[1] * self.cell_height),
+                                      self.cell_width,
+                                      self.cell_height)
+                draw_cell(v,rectangle)
                         
         context.set_source_rgb(0,0,0)
         i=0
@@ -274,9 +288,8 @@ class CrucipixelGrid(lw.Widget):
     def _get_cell_id(self,pos:"Point") -> "(col,row)":
             cell_col = int(pos.x // self.cell_width)
             cell_row = int(pos.y // self.cell_height)
-            return cell_col,cell_row
-        
-#     
+            return cell_col,cell_row 
+
 
     def on_key_up(self, w, e):
         super().on_key_up(w,e)
@@ -953,7 +966,7 @@ class MainArea(lw.UncheckedContainer):
 
 if __name__ == '__main__':
     win = lw.MainWindow(title="CompleteCrucipixel Dev")
-    win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.8,.8,.8,1))
+    win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.9,.9,.9,1))
     root = lw.Root(500,500)
     main_area = MainArea()
     root.set_child(main_area)
