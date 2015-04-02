@@ -83,7 +83,7 @@ class CrucipixelGrid(lw.Widget):
 
         self.set_translate(start.x+.5,start.y+.5)
         self._selected_function_property = "selected"
-        self._selection_start = Point(0,0)
+        self._selection_start_point = Point(0,0)
         self._selection_backup = []
         self._selection_core_encode = []
         self._cell_function = DefaultDict()
@@ -342,15 +342,15 @@ class CrucipixelGrid(lw.Widget):
 
 
     def _select_rectangle(self, cell_col_end, cell_row_end):
-        for c in get_from_to_inclusive(self._selection_start.col, cell_col_end):
-            for r in get_from_to_inclusive(self._selection_start.row, cell_row_end):
+        for c in get_from_to_inclusive(self._selection_start_point.col, cell_col_end):
+            for r in get_from_to_inclusive(self._selection_start_point.row, cell_row_end):
                 self._selection_backup.append((c, r, self._cell_function[c, r]))
                 self._cell_function[c, r] = self._selected_function
                 self._selection_core_encode.append((c,r,self._selected_core_function))
 
     def _selection_start(self, start_point, selected_function):
         self.is_selection_on = True
-        self._selection_start = start_point
+        self._selection_start_point = start_point
         self._selected_function = selected_function
         self._select_rectangle(start_point.col, start_point.row)
 
@@ -376,12 +376,13 @@ class CrucipixelGrid(lw.Widget):
         self._selection_core_encode = []
         if self.selection_style == CrucipixelGrid.SELECTION_FREE:
             self._selection_backup = []
-            self._selection_start = selection_pos
+            self._selection_start_point = selection_pos
             self._select_rectangle(selection_pos.col, selection_pos.row)
         elif self.selection_style == CrucipixelGrid.SELECTION_LINE:
             self._restore_selection()
             self._selection_backup = []
-            if selection_pos.col == self._selection_start.col or selection_pos.row == self._selection_start.row:
+            if selection_pos.col == self._selection_start_point.col or\
+               selection_pos.row == self._selection_start_point.row:
                 self._select_rectangle(selection_pos.col, selection_pos.row)
         elif self.selection_style == CrucipixelGrid.SELECTION_RECTANGLE:
             self._restore_selection()
