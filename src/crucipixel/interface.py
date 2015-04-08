@@ -26,10 +26,14 @@ def gdk_color(*args):
 _start_selected = (.3,.3,.3)
 _start_default = rgb_to_gtk(25,25,112)
 _start_default = (.8,.8,.8)
-_start_selected = rgb_to_gtk(72,61,139)
+# _start_selected = rgb_to_gtk(72,61,139)
 _start_empty = rgb_to_gtk((240,255,240))
-_highlight = rgb_to_gtk(95,158,160)
+# _start_empty = rgb_to_gtk((240,255,240))
+# _start_default, _start_empty = _start_empty, _start_default
 _highlight = rgb_to_gtk(255,255,0)
+_highlight = rgb_to_gtk(255,69,0)
+_highlight = rgb_to_gtk(95,158,160)
+_highlight = rgb_to_gtk(70,130,180)
 
 _keys_r = {"up" : ["w","k", "up"],
           "down" : ["s","j", "down"],
@@ -188,21 +192,48 @@ class CrucipixelGrid(lw.Widget):
             width = self._total_width
             height = self._total_height
             
-            row_rectangle = Rectangle(Point(0,row * self.cell_height),
-                                      width,
-                                      self.cell_height)
+            line_width = 3
+            
+            row_rectangles = [Rectangle(Point(0,row * self.cell_height - line_width/2),
+                                       width,
+                                       line_width),
+                              Rectangle(Point(0,(row + 1) * self.cell_height - line_width/2),
+                                        width,
+                                        line_width)]
+            col_rectangles = [Rectangle(Point(col * self.cell_width -line_width/2,0),
+                                       line_width,
+                                       height),
+                              Rectangle(Point((col+1) * self.cell_width - line_width/2,0),
+                                        line_width,
+                                        height)]
+            context.save()
+            r,g,b = _highlight
+            context.set_source_rgba(r,g,b,.6)
+            for row_rectangle in row_rectangles:
+                context.rectangle(row_rectangle.start.x,
+                                  row_rectangle.start.y,
+                                  row_rectangle.width,
+                                  row_rectangle.height)
+                context.fill()
+            
+            for col_rectangle in col_rectangles:
+                context.rectangle(col_rectangle.start.x,
+                                  col_rectangle.start.y,
+                                  col_rectangle.width,
+                                  col_rectangle.height)
+                context.fill()
             col_rectangle = Rectangle(Point(col * self.cell_width,0),
                                       self.cell_width,
                                       height)
-            context.save()
-            r,g,b = _highlight
-            context.set_source_rgba(r,g,b,.3)
+            row_rectangle = Rectangle(Point(0,row * self.cell_height),
+                                      width,
+                                      self.cell_height)
+            context.set_source_rgba(r,g,b,.1)
             context.rectangle(row_rectangle.start.x,
                               row_rectangle.start.y,
                               row_rectangle.width,
                               row_rectangle.height)
             context.fill()
-            
             context.rectangle(col_rectangle.start.x,
                               col_rectangle.start.y,
                               col_rectangle.width,
@@ -309,7 +340,7 @@ class CrucipixelGrid(lw.Widget):
     
     def on_key_down(self, w, e):
         super().on_key_down(w,e)
-#         print(e.key)
+        print(e.key)
         if e.key == "ctrl_l":
             self.should_drag = True
             print("Should drag?")
