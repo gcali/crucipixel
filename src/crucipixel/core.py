@@ -64,8 +64,8 @@ class Crucipixel:
         
         if count != 0:
             minimal_line.append(count)
-        if minimal_line:
-            print(minimal_line)
+#         if minimal_line:
+#             print(minimal_line)
         return minimal_line
 
     @staticmethod
@@ -74,8 +74,8 @@ class Crucipixel:
             if line[i] == Crucipixel.DEFAULT:
                 return True
         minimal_line = Crucipixel._create_minimal_line(line)
-        if minimal_line == [2,2]:
-            print(guide)
+#         if minimal_line == [2,2]:
+#             print(guide)
         for r,g in zip_longest(minimal_line,guide):
             if r != g:
                 return False

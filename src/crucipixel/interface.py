@@ -15,6 +15,7 @@ from collections import OrderedDict
 from general.lightwidgets import MouseEvent
 from crucipixel import core
 from general.animator import Animator, AccMovement
+from general.debug import WidgetDebug
 
 def gdk_color(*args):
     if len(args) == 1:
@@ -194,11 +195,11 @@ class CrucipixelGrid(lw.Widget):
             
             line_width = 3
             
-            row_rectangles = [Rectangle(Point(0,row * self.cell_height - line_width/2),
-                                       width,
+            row_rectangles = [Rectangle(Point(-.5,row * self.cell_height - line_width/2),
+                                       width+1,
                                        line_width),
-                              Rectangle(Point(0,(row + 1) * self.cell_height - line_width/2),
-                                        width,
+                              Rectangle(Point(-.5,(row + 1) * self.cell_height - line_width/2),
+                                        width+1,
                                         line_width)]
             col_rectangles = [Rectangle(Point(col * self.cell_width -line_width/2,0),
                                        line_width,
@@ -209,6 +210,7 @@ class CrucipixelGrid(lw.Widget):
             context.save()
             r,g,b = _highlight
             context.set_source_rgba(r,g,b,.6)
+            context.set_line_cap(cairo.LINE_CAP_SQUARE)
             for row_rectangle in row_rectangles:
                 context.rectangle(row_rectangle.start.x,
                                   row_rectangle.start.y,
@@ -340,7 +342,6 @@ class CrucipixelGrid(lw.Widget):
     
     def on_key_down(self, w, e):
         super().on_key_down(w,e)
-        print(e.key)
         if e.key == "ctrl_l":
             self.should_drag = True
             print("Should drag?")
@@ -384,6 +385,7 @@ class CrucipixelGrid(lw.Widget):
 
     
     def _handle_hover_movement(self,direction:"str"):
+        self.broadcast_lw_signal("debug_text",direction)
         def get_movement(direction):
             if direction == "down":
                 movement = Point(0,1)
@@ -457,18 +459,19 @@ class CrucipixelGrid(lw.Widget):
         self.invalidate() 
 
     def _selection_move(self, selection_pos):
-        self._selection_core_encode = []
         if self.selection_style == CrucipixelGrid.SELECTION_FREE:
             self._selection_backup = []
             self._selection_start_point = selection_pos
             self._select_rectangle(selection_pos.col, selection_pos.row)
         elif self.selection_style == CrucipixelGrid.SELECTION_LINE:
+            self._selection_core_encode = []
             self._restore_selection()
             self._selection_backup = []
             if selection_pos.col == self._selection_start_point.col or\
                selection_pos.row == self._selection_start_point.row:
                 self._select_rectangle(selection_pos.col, selection_pos.row)
         elif self.selection_style == CrucipixelGrid.SELECTION_RECTANGLE:
+            self._selection_core_encode = []
             self._restore_selection()
             self._selection_backup = []
             self._select_rectangle(selection_pos.col, selection_pos.row)
@@ -492,7 +495,12 @@ class CrucipixelGrid(lw.Widget):
         self._selection_backup = []
         if self.core_crucipixel:
             self.is_mouse_selection_on = False
+            print("Encode:")
+            for t in self._selection_core_encode:
+                print("*",t)
             rows, cols = self.core_crucipixel.update(self._selection_core_encode)
+            print("Activate status:")
+            print(rows,cols)
             self.broadcast_lw_signal("activate-hor-status", rows)
             self.broadcast_lw_signal("activate-ver-status", cols)
         self._selection_core_encode = []
@@ -995,15 +1003,24 @@ class MainArea(lw.UncheckedContainer):
             self._mouse_down = False
         super().on_mouse_up(w,e) 
 
+class CustomDebug(WidgetDebug):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        def handle_set_text(value):
+            self.text = value
+        self.register_signal("debug_text",handle_set_text)
+        
+
 if __name__ == '__main__':
     win = lw.MainWindow(title="CompleteCrucipixel Dev")
     win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.9,.9,.9,1))
     root = lw.Root(500,500)
+    debug = CustomDebug(width=100,height=30)
+    debug.translate(200,10)
     main_area = MainArea()
+    main_area.add(debug)
     root.set_child(main_area)
-#     hor_elements = "2,1;2,2;3;4;5"
-#     ver_elements = "2,1;2,2;3;4;5"
-#     cruci = core.Crucipixel.guides_from_strings(5, 5, hor_elements, ver_elements)
     with open("test.tmp","r") as f:
         cruci = core.Crucipixel.guides_from_file(f)
     main_area.start_crucipixel(cruci)

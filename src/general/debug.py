@@ -30,14 +30,8 @@ class WidgetDebug(lw.Widget):
     
     @text.setter
     def text(self,value):
-        print("Ciao!")
         self._text = value
         self.invalidate()
-    
-    def on_mouse_down(self, w, e):
-        super().on_mouse_down(w,e)
-        self.text = "ciao come stai"
-
     
     def on_draw(self, widget, context):
         def split_every(string,nth):
@@ -48,8 +42,6 @@ class WidgetDebug(lw.Widget):
         super().on_draw(widget, context)
         ext = context.text_extents("W")
         txt_height = math.ceil(ext[3])
-        txt_width = math.ceil(ext[2])
-        line_limit = self.width // txt_width
         basic_lines = self.text.split(sep='\n')
         lines = []
         width = self.width
@@ -63,7 +55,6 @@ class WidgetDebug(lw.Widget):
                     lines.append(l)
             else:
                 lines.append(bline)
-        print(lines)
                 
         context.set_font_size(self.font_size)
         context.set_source_rgb(0,0,0)
