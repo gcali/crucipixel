@@ -15,11 +15,28 @@ from collections import OrderedDict
 from general.lightwidgets import MouseEvent
 from crucipixel import core
 from general.animator import Animator, AccMovement
+from general.debug import WidgetDebug
+
+def gdk_color(*args):
+    if len(args) == 1:
+        r,g,b = args[0]
+    else:
+        r,g,b = args
+    return Gdk.Color.from_floats(r, g, b)
 
 _start_selected = (.3,.3,.3)
+_start_default = rgb_to_gtk(25,25,112)
 _start_default = (.8,.8,.8)
+# _start_selected = rgb_to_gtk(72,61,139)
 _start_empty = rgb_to_gtk((240,255,240))
-_highlight = rgb_to_gtk(95,158,160)
+# _start_empty = rgb_to_gtk((240,255,240))
+# _start_default, _start_empty = _start_empty, _start_default
+_highlight = rgb_to_gtk(255,255,0)
+# _highlight = rgb_to_gtk(255,69,0)
+# _highlight = rgb_to_gtk(95,158,160)
+_highlight = rgb_to_gtk(70,130,180)
+# _highlight = rgb_to_gtk(46,139,87)
+# _highlight = rgb_to_gtk(34,139,34)
 
 _keys_r = {"up" : ["w","k", "up"],
           "down" : ["s","j", "down"],
@@ -67,7 +84,8 @@ class CrucipixelGrid(lw.Widget):
         self.rows=rows
         self.cell_width=width
         self.cell_height=height
-        self.is_selection_on = False
+        self.is_mouse_selection_on = False
+        self.is_keyboard_selection_on = False
         
         self.input_function_map = {"left" : "selected",
                                    "right" : "empty",
@@ -81,7 +99,7 @@ class CrucipixelGrid(lw.Widget):
         
         self.selection_style = CrucipixelGrid.SELECTION_RECTANGLE
 
-        self.set_translate(start.x+.5,start.y+.5)
+        self.set_translate(start.x,start.y)
         self._selected_function_property = "selected"
         self._selection_start_point = Point(0,0)
         self._selection_backup = []
@@ -91,7 +109,7 @@ class CrucipixelGrid(lw.Widget):
         self._highlight_row = None
         self._highlight_col = None
         self.core_crucipixel = crucipixel
-        self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+1,self._total_width+1)
+        self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+2,self._total_width+2)
         self.should_drag = False
         self.is_dragging = False
         self._movement_keys = _global_movement_keys
@@ -172,26 +190,54 @@ class CrucipixelGrid(lw.Widget):
                 self.invalidate()
     
     def on_draw(self,widget,context):
+        print(self.fromWidgetCoords)
         
         def highlight_rectangles(row,col):
             width = self._total_width
             height = self._total_height
             
-            row_rectangle = Rectangle(Point(0,row * self.cell_height),
-                                      width,
-                                      self.cell_height)
+            line_width = 3
+            
+            row_rectangles = [Rectangle(Point(1,row * self.cell_height - line_width/2),
+                                       width-2,
+                                       line_width),
+                              Rectangle(Point(1,(row + 1) * self.cell_height - line_width/2),
+                                        width-2,
+                                        line_width)]
+            col_rectangles = [Rectangle(Point(col * self.cell_width -line_width/2,1),
+                                       line_width,
+                                       height-2),
+                              Rectangle(Point((col+1) * self.cell_width - line_width/2,1),
+                                        line_width,
+                                        height-2)]
+            context.save()
+            r,g,b = _highlight
+            context.set_source_rgba(r,g,b,.6)
+            for row_rectangle in row_rectangles:
+                context.rectangle(row_rectangle.start.x,
+                                  row_rectangle.start.y,
+                                  row_rectangle.width,
+                                  row_rectangle.height)
+                context.fill()
+            
+            for col_rectangle in col_rectangles:
+                context.rectangle(col_rectangle.start.x,
+                                  col_rectangle.start.y,
+                                  col_rectangle.width,
+                                  col_rectangle.height)
+                context.fill()
             col_rectangle = Rectangle(Point(col * self.cell_width,0),
                                       self.cell_width,
                                       height)
-            context.save()
-            r,g,b = _highlight
-            context.set_source_rgba(r,g,b,.3)
+            row_rectangle = Rectangle(Point(0,row * self.cell_height),
+                                      width,
+                                      self.cell_height)
+            context.set_source_rgba(r,g,b,.1)
             context.rectangle(row_rectangle.start.x,
                               row_rectangle.start.y,
                               row_rectangle.width,
                               row_rectangle.height)
             context.fill()
-            
             context.rectangle(col_rectangle.start.x,
                               col_rectangle.start.y,
                               col_rectangle.width,
@@ -212,7 +258,7 @@ class CrucipixelGrid(lw.Widget):
                               area.width,
                               area.height)
             context.fill()
-            if function == "empty":
+            if True and function == "empty":
                 r,g,b = self._function_to_color("selected")
                 context.set_source_rgb(r,g,b)
                 context.set_line_cap(cairo.LINE_CAP_ROUND)
@@ -229,18 +275,23 @@ class CrucipixelGrid(lw.Widget):
                 context.stroke()
                 
 
-        for (k,v) in self._cell_function.items():
-            rectangle = Rectangle(Point(k[0] * self.cell_width,
-                                        k[1] * self.cell_height),
-                                  self.cell_width,
-                                  self.cell_height)
-            draw_cell(v,rectangle)
+#         for (k,v) in self._cell_function.items():
+        for col in range(self.cols):
+            for row in range(self.rows):
+                k = (col,row)
+                v = self._cell_function[k]
+                rectangle = Rectangle(Point(k[0] * self.cell_width,
+                                            k[1] * self.cell_height),
+                                      self.cell_width,
+                                      self.cell_height)
+                draw_cell(v,rectangle)
                         
         context.set_source_rgb(0,0,0)
+        context.set_line_cap(cairo.LINE_CAP_SQUARE)
         i=0
         for x in range(0,width+self.cell_width,self.cell_width):
             if i % 5 == 0:
-                context.set_line_width(2)
+                context.set_line_width(2.5)
             else:
                 context.set_line_width(1)
             context.move_to(x,0)
@@ -251,7 +302,7 @@ class CrucipixelGrid(lw.Widget):
         i=0
         for y in range(0,height+self.cell_height,self.cell_height):
             if i % 5 == 0:
-                context.set_line_width(2)
+                context.set_line_width(2.5)
             else:
                 context.set_line_width(1)
             context.move_to(0,y)
@@ -273,39 +324,71 @@ class CrucipixelGrid(lw.Widget):
     def _get_cell_id(self,pos:"Point") -> "(col,row)":
             cell_col = int(pos.x // self.cell_width)
             cell_row = int(pos.y // self.cell_height)
-            return cell_col,cell_row
-        
-#     
+            return cell_col,cell_row 
+
 
     def on_key_up(self, w, e):
         super().on_key_up(w,e)
         if e.key == "ctrl_l":
             self.should_drag = False
-#             return True
         elif e.key == "r":
             self.update_status_from_crucipixel()
-#             return True
+        elif e.key in self._selection_keys and self.is_keyboard_selection_on:
+            self._handle_key_selection_end()
+            self.is_keyboard_selection_on = False
         else:
             try:
                 self.selection_style = self.input_selection_style_map[e.key]
             except KeyError:
                 pass
         return False
-
+    
     def on_key_down(self, w, e):
         super().on_key_down(w,e)
-        print(e.key)
         if e.key == "ctrl_l":
             self.should_drag = True
+            print("Should drag?")
             return True
         elif e.key in self._movement_keys:
             self._handle_hover_movement(self._movement_keys[e.key])
+            if self.is_keyboard_selection_on:
+                self._handle_key_selection_move(self._movement_keys[e.key])
+            self.invalidate()
             return True
-#         elif e.key in self._selection_keys:
-#             self._handle_selection_key(self._selection_keys[e.key])
+        elif e.key in self._selection_keys and not self.is_keyboard_selection_on:
+            if self.is_mouse_selection_on:
+                self.is_mouse_selection_on = False
+                self._selection_end()
+            self.is_keyboard_selection_on = True
+            self._handle_key_selection_start(self._selection_keys[e.key])
+            self.invalidate()
         return False
     
+    def _handle_key_selection_start(self, function):
+        if self.is_mouse_selection_on:
+            self._selection_end()
+        if self._highlight_col is None:
+            col = 0
+        else:
+            col = self._highlight_col
+        if self._highlight_row is None:
+            row = 0
+        else:
+            row = self._highlight_row
+        start_point = Point(col,row)
+        self._selection_start(start_point, function)
+    
+    def _handle_key_selection_move(self, direction):
+        col = self._highlight_col if not self._highlight_col is None else 0
+        row = self._highlight_row if not self._highlight_row is None else 0
+        self._selection_move(Point(col,row))
+
+    def _handle_key_selection_end(self):
+        self._selection_end()
+
+    
     def _handle_hover_movement(self,direction:"str"):
+        self.broadcast_lw_signal("debug_text",direction)
         def get_movement(direction):
             if direction == "down":
                 movement = Point(0,1)
@@ -334,7 +417,6 @@ class CrucipixelGrid(lw.Widget):
             self._highlight_col = clamp(self._highlight_col + movement.col,
                                         0,
                                         self.cols-1)
-        self.invalidate()
         
     def _restore_selection(self):
         for row, col, color in self._selection_backup:
@@ -349,22 +431,29 @@ class CrucipixelGrid(lw.Widget):
                 self._selection_core_encode.append((c,r,self._selected_core_function))
 
     def _selection_start(self, start_point, selected_function):
-        self.is_selection_on = True
+        self.is_mouse_selection_on = True
         self._selection_start_point = start_point
         self._selected_function = selected_function
         self._select_rectangle(start_point.col, start_point.row)
 
     def on_mouse_down(self, w, e):
-        if not self.should_drag and self.is_point_in(Point(e.x,e.y)):
+        point_in = self.is_point_in(Point(e.x,e.y))
+        if (not self.should_drag) and\
+           (not self.is_keyboard_selection_on) and\
+           point_in:
             start_point = Point(self._get_cell_id(e))
             selected_function = self.input_function_map[e.button]
-            self.is_selection_on = True
+            self.is_mouse_selection_on = True
             self._selection_start(start_point, selected_function)
             self.invalidate()
             return True
         else:
-            self.is_dragging = True
-            return False
+            if self.should_drag or\
+               not point_in:
+                self.is_dragging = True
+                return False
+            else:
+                return False
     
     def on_mouse_exit(self):
         super().on_mouse_exit()
@@ -373,31 +462,33 @@ class CrucipixelGrid(lw.Widget):
         self.invalidate() 
 
     def _selection_move(self, selection_pos):
-        self._selection_core_encode = []
         if self.selection_style == CrucipixelGrid.SELECTION_FREE:
             self._selection_backup = []
             self._selection_start_point = selection_pos
             self._select_rectangle(selection_pos.col, selection_pos.row)
         elif self.selection_style == CrucipixelGrid.SELECTION_LINE:
+            self._selection_core_encode = []
             self._restore_selection()
             self._selection_backup = []
             if selection_pos.col == self._selection_start_point.col or\
                selection_pos.row == self._selection_start_point.row:
                 self._select_rectangle(selection_pos.col, selection_pos.row)
         elif self.selection_style == CrucipixelGrid.SELECTION_RECTANGLE:
+            self._selection_core_encode = []
             self._restore_selection()
             self._selection_backup = []
             self._select_rectangle(selection_pos.col, selection_pos.row)
 
     def on_mouse_move(self, w, e):
         if self.is_dragging:
+            print("I'm dragging!")
             return False
         x = clamp(e.x,0,self._total_width-1)
         y = clamp(e.y,0,self._total_height-1)
         cell_col,cell_row = self._get_cell_id(Point(x,y))
         self.highlight_hover(cell_row,cell_col)
         selection_pos = Point(cell_col,cell_row)
-        if self.is_selection_on:
+        if self.is_mouse_selection_on:
             self._selection_move(selection_pos) 
         self.invalidate()
         return False
@@ -406,21 +497,26 @@ class CrucipixelGrid(lw.Widget):
     def _selection_end(self):
         self._selection_backup = []
         if self.core_crucipixel:
-            self.is_selection_on = False
+            self.is_mouse_selection_on = False
+            print("Encode:")
+            for t in self._selection_core_encode:
+                print("*",t)
             rows, cols = self.core_crucipixel.update(self._selection_core_encode)
+            print("Activate status:")
+            print(rows,cols)
             self.broadcast_lw_signal("activate-hor-status", rows)
             self.broadcast_lw_signal("activate-ver-status", cols)
         self._selection_core_encode = []
 
     def on_mouse_up(self, w, e):
-        if self.is_selection_on:
-            self.is_selection_on = False
+        if self.is_mouse_selection_on:
+            self.is_mouse_selection_on = False
             self._selection_end()
         self.is_dragging = False
         return False
     
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
-        if category == MouseEvent.MOUSE_MOVE and self.is_selection_on:
+        if category == MouseEvent.MOUSE_MOVE and self.is_mouse_selection_on:
             return True
         else:
             return super().is_point_in(p,category)
@@ -581,7 +677,7 @@ class Guides(lw.Widget):
     def __init__(self, elements:"num iterable", 
                  start:"Point", size:"num", orientation=HORIZONTAL): 
         super().__init__()
-        self.translate(start.x +.5, start.y+.5)
+        self.translate(start.x, start.y)
         self.orientation = orientation
         self.elements = Guides._elements_from_list([ list(e) for e in elements ])
         self.cell_size = size
@@ -613,9 +709,9 @@ class Guides(lw.Widget):
             self.register_signal("activate-ver-status", activate_status)
 
         if self.orientation == Guides.HORIZONTAL:
-            self.clip_rectangle = Rectangle(Point(0,0),self.cell_size * len(self.elements)+.5,-self.height)
+            self.clip_rectangle = Rectangle(Point(0,-.5),self.cell_size * len(self.elements)+2,-self.height)
         else:
-            self.clip_rectangle = Rectangle(Point(0,0),-self.width,self.cell_size * len(self.elements)+.5)
+            self.clip_rectangle = Rectangle(Point(-.5,0),-self.width,self.cell_size * len(self.elements) + 2)
         self.color_map = {
             "done" : rgb_to_gtk(46,139,87),
             "wrong" : rgb_to_gtk(178,34,34),
@@ -715,7 +811,7 @@ class Guides(lw.Widget):
         for (i,e) in enumerate(self.elements):
             line = self._line_coordinates(i)
             if (i+1) % 5 == 0:
-                context.set_line_width(2)
+                context.set_line_width(2.5)
             else:
                 context.set_line_width(1)
             draw_line(line)
@@ -910,15 +1006,25 @@ class MainArea(lw.UncheckedContainer):
             self._mouse_down = False
         super().on_mouse_up(w,e) 
 
+class CustomDebug(WidgetDebug):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        def handle_set_text(value):
+            self.text = value
+        self.register_signal("debug_text",handle_set_text)
+        
+
 if __name__ == '__main__':
     win = lw.MainWindow(title="CompleteCrucipixel Dev")
-    win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.8,.8,.8,1))
+    win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.9,.9,.9,1))
     root = lw.Root(500,500)
+    debug = CustomDebug(width=100,height=30)
+    debug.translate(200,10)
     main_area = MainArea()
+    main_area.translate(.5,.5)
+    main_area.add(debug)
     root.set_child(main_area)
-#     hor_elements = "2,1;2,2;3;4;5"
-#     ver_elements = "2,1;2,2;3;4;5"
-#     cruci = core.Crucipixel.guides_from_strings(5, 5, hor_elements, ver_elements)
     with open("test.tmp","r") as f:
         cruci = core.Crucipixel.guides_from_file(f)
     main_area.start_crucipixel(cruci)
