@@ -32,9 +32,11 @@ _start_empty = rgb_to_gtk((240,255,240))
 # _start_empty = rgb_to_gtk((240,255,240))
 # _start_default, _start_empty = _start_empty, _start_default
 _highlight = rgb_to_gtk(255,255,0)
-_highlight = rgb_to_gtk(255,69,0)
-_highlight = rgb_to_gtk(95,158,160)
+# _highlight = rgb_to_gtk(255,69,0)
+# _highlight = rgb_to_gtk(95,158,160)
 _highlight = rgb_to_gtk(70,130,180)
+# _highlight = rgb_to_gtk(46,139,87)
+# _highlight = rgb_to_gtk(34,139,34)
 
 _keys_r = {"up" : ["w","k", "up"],
           "down" : ["s","j", "down"],
@@ -97,7 +99,7 @@ class CrucipixelGrid(lw.Widget):
         
         self.selection_style = CrucipixelGrid.SELECTION_RECTANGLE
 
-        self.set_translate(start.x+.5,start.y+.5)
+        self.set_translate(start.x,start.y)
         self._selected_function_property = "selected"
         self._selection_start_point = Point(0,0)
         self._selection_backup = []
@@ -107,7 +109,7 @@ class CrucipixelGrid(lw.Widget):
         self._highlight_row = None
         self._highlight_col = None
         self.core_crucipixel = crucipixel
-        self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+1,self._total_width+1)
+        self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+2,self._total_width+2)
         self.should_drag = False
         self.is_dragging = False
         self._movement_keys = _global_movement_keys
@@ -188,6 +190,7 @@ class CrucipixelGrid(lw.Widget):
                 self.invalidate()
     
     def on_draw(self,widget,context):
+        print(self.fromWidgetCoords)
         
         def highlight_rectangles(row,col):
             width = self._total_width
@@ -195,22 +198,21 @@ class CrucipixelGrid(lw.Widget):
             
             line_width = 3
             
-            row_rectangles = [Rectangle(Point(-.5,row * self.cell_height - line_width/2),
-                                       width+1,
+            row_rectangles = [Rectangle(Point(1,row * self.cell_height - line_width/2),
+                                       width-2,
                                        line_width),
-                              Rectangle(Point(-.5,(row + 1) * self.cell_height - line_width/2),
-                                        width+1,
+                              Rectangle(Point(1,(row + 1) * self.cell_height - line_width/2),
+                                        width-2,
                                         line_width)]
-            col_rectangles = [Rectangle(Point(col * self.cell_width -line_width/2,0),
+            col_rectangles = [Rectangle(Point(col * self.cell_width -line_width/2,1),
                                        line_width,
-                                       height),
-                              Rectangle(Point((col+1) * self.cell_width - line_width/2,0),
+                                       height-2),
+                              Rectangle(Point((col+1) * self.cell_width - line_width/2,1),
                                         line_width,
-                                        height)]
+                                        height-2)]
             context.save()
             r,g,b = _highlight
             context.set_source_rgba(r,g,b,.6)
-            context.set_line_cap(cairo.LINE_CAP_SQUARE)
             for row_rectangle in row_rectangles:
                 context.rectangle(row_rectangle.start.x,
                                   row_rectangle.start.y,
@@ -256,7 +258,7 @@ class CrucipixelGrid(lw.Widget):
                               area.width,
                               area.height)
             context.fill()
-            if function == "empty":
+            if True and function == "empty":
                 r,g,b = self._function_to_color("selected")
                 context.set_source_rgb(r,g,b)
                 context.set_line_cap(cairo.LINE_CAP_ROUND)
@@ -285,10 +287,11 @@ class CrucipixelGrid(lw.Widget):
                 draw_cell(v,rectangle)
                         
         context.set_source_rgb(0,0,0)
+        context.set_line_cap(cairo.LINE_CAP_SQUARE)
         i=0
         for x in range(0,width+self.cell_width,self.cell_width):
             if i % 5 == 0:
-                context.set_line_width(2)
+                context.set_line_width(2.5)
             else:
                 context.set_line_width(1)
             context.move_to(x,0)
@@ -299,7 +302,7 @@ class CrucipixelGrid(lw.Widget):
         i=0
         for y in range(0,height+self.cell_height,self.cell_height):
             if i % 5 == 0:
-                context.set_line_width(2)
+                context.set_line_width(2.5)
             else:
                 context.set_line_width(1)
             context.move_to(0,y)
@@ -674,7 +677,7 @@ class Guides(lw.Widget):
     def __init__(self, elements:"num iterable", 
                  start:"Point", size:"num", orientation=HORIZONTAL): 
         super().__init__()
-        self.translate(start.x +.5, start.y+.5)
+        self.translate(start.x, start.y)
         self.orientation = orientation
         self.elements = Guides._elements_from_list([ list(e) for e in elements ])
         self.cell_size = size
@@ -706,9 +709,9 @@ class Guides(lw.Widget):
             self.register_signal("activate-ver-status", activate_status)
 
         if self.orientation == Guides.HORIZONTAL:
-            self.clip_rectangle = Rectangle(Point(0,0),self.cell_size * len(self.elements)+.5,-self.height)
+            self.clip_rectangle = Rectangle(Point(0,-.5),self.cell_size * len(self.elements)+2,-self.height)
         else:
-            self.clip_rectangle = Rectangle(Point(0,0),-self.width,self.cell_size * len(self.elements)+.5)
+            self.clip_rectangle = Rectangle(Point(-.5,0),-self.width,self.cell_size * len(self.elements) + 2)
         self.color_map = {
             "done" : rgb_to_gtk(46,139,87),
             "wrong" : rgb_to_gtk(178,34,34),
@@ -808,7 +811,7 @@ class Guides(lw.Widget):
         for (i,e) in enumerate(self.elements):
             line = self._line_coordinates(i)
             if (i+1) % 5 == 0:
-                context.set_line_width(2)
+                context.set_line_width(2.5)
             else:
                 context.set_line_width(1)
             draw_line(line)
@@ -1019,6 +1022,7 @@ if __name__ == '__main__':
     debug = CustomDebug(width=100,height=30)
     debug.translate(200,10)
     main_area = MainArea()
+    main_area.translate(.5,.5)
     main_area.add(debug)
     root.set_child(main_area)
     with open("test.tmp","r") as f:

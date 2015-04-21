@@ -229,13 +229,15 @@ class Widget:
     
     @property
     def fromWidgetCoords(self):
-        return self._fromScale.multiply(self._fromRotate.multiply(self._fromTranslate))
 #         return self._fromRotate.multiply(self._fromTranslate.multiply(self._fromScale))
+        return self._fromScale.multiply(self._fromTranslate.multiply(self._fromRotate))
+        return self._fromScale.multiply(self._fromRotate.multiply(self._fromTranslate))
     
     @property
     def toWidgetCoords(self):
-        return self._toTranslate.multiply(self._toRotate.multiply(self._toScale))
 #         return self._toScale.multiply(self._toTranslate.multiply(self._toRotate))
+        return self._toRotate.multiply(self._toTranslate.multiply(self._toScale))
+        return self._toTranslate.multiply(self._toRotate.multiply(self._toScale))
     
     def rotate(self,angle):
         self._fromRotate.rotate(angle)
