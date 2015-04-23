@@ -81,3 +81,40 @@ class Rectangle:
                 Point(self.start.x + self.width,self.start.y + self.height)
                 ]
         
+
+class RoundedRectangle:
+    
+    def __init__(self, start_x, start_y, width, height):
+        self._start = Point(start_x, start_y)
+        self._width = width
+        self._height = height
+        self._radius = min(self._width / 2, self._height / 2, 10)
+    
+    def is_point_in(self, p:"Point"):
+        main_rectangle = Rectangle(self._start, self._width, self._height)
+        if not main_rectangle.is_point_in(p):
+            return False
+        thin_rectangle = Rectangle(Point(self._start.x + self._radius, self._start.y), 
+                                   self._width - 2*self._radius, 
+                                   self._height)
+        if thin_rectangle.is_point_in(p):
+            return True
+        short_rectangle = Rectangle(Point(self._start.x, self._start.y + self._radius),
+                                    self._width,
+                                    self._height - 2*self._radius)
+        if short_rectangle.is_point_in(p):
+            return True 
+        def check_circle(p:"Point", center:"Point", radius):
+            return (p.x - center.x)**2 + (p.y - center.y)**2 <= radius**2
+        radius = self._radius
+        if check_circle(p, Point(radius,radius), radius):
+            return True
+        elif check_circle(p, Point(self._start.x + self._width - radius, radius), radius):
+            return True
+        elif check_circle(p, Point(self._start.x + self._width - radius,
+                                   self._start.y + self._height - radius),
+                          radius):
+            return True
+        elif check_circle(p, Point(radius, self._start.y + self._height - radius), radius):
+            return True
+        return False

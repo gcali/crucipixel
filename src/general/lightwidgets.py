@@ -8,10 +8,12 @@ from gi.repository import Gtk
 from gi.repository.Gdk import EventMask
 import cairo
 from math import pi,sqrt
-from general.geometry import Point, Rectangle
+from general.geometry import Point, Rectangle, RoundedRectangle
 from _operator import pos 
 from gi.overrides.Gdk import Gdk
 from general.animator import Animator, Slide, StopAnimation, AccMovement
+from general.support import rgb_to_gtk
+import math
 
 def _transform_mouse_event(event_type,e,w):
     x,y=w.toWidgetCoords.transform_point(e.x,e.y)
@@ -444,6 +446,76 @@ class Donut(Widget):
             self.centerP =  Point(e.x,e.y) - self._deltaP
             w.invalidate()
         return True
+    
+class DrawableRoundedRectangle(RoundedRectangle):
+    
+    def draw_on_context(self, context):
+        pi = math.pi
+        context.new_sub_path()
+        start_x = self._start.x
+        start_y = self._start.y
+        radius = self._radius
+        width = self._width
+        height = self._height
+        context.arc(start_x + width - radius, start_y + radius, radius, -pi/2, 0)
+        context.arc(start_x + width - radius, start_y + height - radius, radius, 0, pi/2)
+        context.arc(start_x + radius, start_y + height - radius, radius, pi/2, pi)
+        context.arc(start_x + radius, start_y + radius, radius, pi, 3*pi/2)
+        context.close_path() 
+
+
+class Button(Widget):
+    
+    def __init__(self, label:"str", 
+                 size_x:"int", size_y:"int", 
+                 background_color=(80,80,80), 
+                 label_color = (0,0,0),
+                 **kwargs):
+        super().__init__(**kwargs)
+        self._size = Point(size_x, size_y)
+        self.label = label
+        self.background_color = background_color
+        self.label_color = label_color
+        self._shape = DrawableRoundedRectangle(0,0,size_x, size_y)
+    
+    @property
+    def background_color(self):
+        return self._background_color
+    
+    @background_color.setter
+    def background_color(self, value):
+        self._background_color = rgb_to_gtk(value)
+    
+    @property
+    def label_color(self):
+        return self._label_color
+    
+    @label_color.setter
+    def label_color(self,value):
+        self._label_color = rgb_to_gtk(value)
+    
+    def on_draw(self, w, c):
+        super().on_draw(w, c)
+        c.save()
+        c.set_source_rgb(*self.background_color)
+        self._shape.draw_on_context(c)
+        c.fill()
+        
+        xb, yb, width, height, _, _ = c.text_extents(self.label)
+        total_width = width - xb
+        total_height = height + yb
+        start_x = (self._size.x - total_width)/2 + xb
+        start_y = (self._size.y - total_height)/2 - yb
+        print(start_x, start_y)
+        c.move_to(start_x,start_y)
+        c.set_source_rgb(*self.label_color)
+        c.show_text(self.label)
+        c.restore()
+    
+    def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
+        if category == MouseEvent.MOUSE_UP:
+            return True
+        return self._shape.is_point_in(p) 
 
 class Container(Widget):
     
@@ -617,9 +689,9 @@ class MainWindow(Gtk.Window):
 if __name__ == '__main__':
     main = MainWindow("Animated donut")
     root = Root(600,600)
+    main.add(root)
     donut = Donut(Point(200,200), 50, 150)
     donut_b = Donut(Point(300,300), 50, 150)
-    main.add(root)
     cont = UncheckedContainer()
     cont.add(donut)
     root.child=cont
