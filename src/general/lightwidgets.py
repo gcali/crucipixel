@@ -90,7 +90,7 @@ class Root(Gtk.DrawingArea):
     
     def __init__(self, width=-1,height=-1,*args,**kwargs):
         super().__init__(*args, **kwargs)
-        self.child = None
+        self._child = None
         events = EventMask.BUTTON_PRESS_MASK\
                  | EventMask.BUTTON_RELEASE_MASK\
                  | EventMask.POINTER_MOTION_MASK\
@@ -107,47 +107,56 @@ class Root(Gtk.DrawingArea):
         self.set_min_size(width,height)
         self._lw_signals = {}
         
+    @property
+    def child(self):
+        return self._child
+    
+    @child.setter
+    def child(self, value):
+        self._child = value
+        value.father = self
+        
     def set_min_size(self, sizeX:"num", sizeY:"num"):
         self.set_size_request(sizeX, sizeY)
     
     def set_child(self, child:"Widget"):
-        self.child = child
+        self._child = child
         child.father = self
     
     def on_draw(self, widget:"Widget", context:"cairo.Context"):
         context.save()
-        context.transform(self.child.fromWidgetCoords)
-        if self.child.is_clip_set():
-            rectangle = self.child.clip_rectangle
+        context.transform(self._child.fromWidgetCoords)
+        if self._child.is_clip_set():
+            rectangle = self._child.clip_rectangle
             context.rectangle(rectangle.start.x,rectangle.start.y,
                               rectangle.width,rectangle.height)
             context.clip()
-        self.child.on_draw(self,context)
+        self._child.on_draw(self,context)
         context.restore()
     
     def _transform_mouse_event(self,event_type,e):
-        return _transform_mouse_event(event_type,e,self.child)
+        return _transform_mouse_event(event_type,e,self._child)
     
     def on_mouse_down(self,w:"Gtk.Widget",e:"Gdk.EventButton"):
         self.grab_focus()
         if e.type == Gdk.EventType.BUTTON_PRESS:
-            self.child.on_mouse_down(self,self._transform_mouse_event("mouse_down",e))
+            self._child.on_mouse_down(self,self._transform_mouse_event("mouse_down",e))
         return True
     
     def on_mouse_up(self,w:"Gtk.Widget",e:"Gdk.EventButton"):
-        self.child.on_mouse_up(self,self._transform_mouse_event("mouse_up", e))
+        self._child.on_mouse_up(self,self._transform_mouse_event("mouse_up", e))
         return True
 
     def on_mouse_move(self,w:"Gtk.Widget",e:"Gdk.EventMotion"):
-        self.child.on_mouse_move(self,self._transform_mouse_event("mouse_move",e))
+        self._child.on_mouse_move(self,self._transform_mouse_event("mouse_move",e))
         return True
     
     def on_key_down(self,w:"Gtk.Widget",e:"Gdk.EventKey"):
-        self.child.on_key_down(self,_transform_keyboard_event("key_down",e))
+        self._child.on_key_down(self,_transform_keyboard_event("key_down",e))
         return True
 
     def on_key_up(self,w:"Gtk.Widget",e:"Gdk.EventKey"):
-        self.child.on_key_up(self,_transform_keyboard_event("key_up",e))
+        self._child.on_key_up(self,_transform_keyboard_event("key_up",e))
         return True
     
     def invalidate(self):
@@ -613,7 +622,7 @@ if __name__ == '__main__':
     main.add(root)
     cont = UncheckedContainer()
     cont.add(donut)
-    root.set_child(cont)
+    root.child=cont
     animator = Animator(interval=.01)
     start_point = Point(50,50)
     end_point = Point(350,350)
@@ -633,7 +642,7 @@ if __name__ == '__main__':
                                                          start_point, 
                                                          assign)
         new_animation.widget = donut
-#         animator.add_animation(new_animation)
+        animator.add_animation(new_animation)
     animation = Slide.calculateAcceleration(2*duration,
                                             start_point, 
                                             speed, 
@@ -642,7 +651,7 @@ if __name__ == '__main__':
     animation_stop = StopAnimation(animation=animation,time_offset=1)
     animation.widget = donut
     animator.add_animation(animation)
-#     animator.add_animation(animation_stop)
+    animator.add_animation(animation_stop)
 #     def assign(d):
 #         donut.centerP = d
 #     animation = AccMovement(assign=assign,
@@ -651,6 +660,6 @@ if __name__ == '__main__':
 #                             acc=Point(100,100),
 #                             start_speed=Point(0,0))
 #     animation.widget = donut
-    animator.add_animation(animation)
+#     animator.add_animation(animation)
     animator.start() 
     main.start_main()
