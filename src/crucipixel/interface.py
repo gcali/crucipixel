@@ -7,12 +7,13 @@ Created on Feb 22, 2015
 import math
 import cairo
 from gi.repository import Gtk,Gdk
-from general.geometry import Point, Rectangle
+from general.geometry import Point, Rectangle, RoundedRectangle
 import general.lightwidgets as lw
 from general.support import get_from_to_inclusive, DefaultDict, clamp,\
-                            rgb_to_gtk, Bunch
+                            rgb_to_gtk, Bunch, gtk_to_rgb
 from collections import OrderedDict
-from general.lightwidgets import MouseEvent
+from general.lightwidgets import MouseEvent, DrawableRoundedRectangle,\
+    DrawableRectangle
 from crucipixel import core
 from general.animator import Animator, AccMovement
 from general.debug import WidgetDebug
@@ -24,6 +25,7 @@ def gdk_color(*args):
         r,g,b = args
     return Gdk.Color.from_floats(r, g, b)
 
+_background = (.9,.9,.9)
 _start_selected = (.3,.3,.3)
 _start_default = rgb_to_gtk(25,25,112)
 _start_default = (.8,.8,.8)
@@ -190,7 +192,6 @@ class CrucipixelGrid(lw.Widget):
                 self.invalidate()
     
     def on_draw(self,widget,context):
-        print(self.fromWidgetCoords)
         
         def highlight_rectangles(row,col):
             width = self._total_width
@@ -498,12 +499,12 @@ class CrucipixelGrid(lw.Widget):
         self._selection_backup = []
         if self.core_crucipixel:
             self.is_mouse_selection_on = False
-            print("Encode:")
-            for t in self._selection_core_encode:
-                print("*",t)
+#             print("Encode:")
+#             for t in self._selection_core_encode:
+#                 print("*",t)
             rows, cols = self.core_crucipixel.update(self._selection_core_encode)
-            print("Activate status:")
-            print(rows,cols)
+#             print("Activate status:")
+#             print(rows,cols)
             self.broadcast_lw_signal("activate-hor-status", rows)
             self.broadcast_lw_signal("activate-ver-status", cols)
         self._selection_core_encode = []
@@ -555,10 +556,10 @@ class Selector(lw.Widget):
         
     def _get_rectangle_list(self,lines) -> "None//Raises: AttributeError":
         size = self._get_rectangle_size()
-        return [Rectangle(Point(self.padding, 
+        return [DrawableRoundedRectangle(Point(self.padding, 
                                 self.padding*(1+i) + size* i),
-                          size, 
-                          size) for i in range(len(lines))]
+                                size, 
+                                size) for i in range(len(lines))]
     
     def _get_rectangle_size(self) -> "num//Raises: AttributeError":
         if not hasattr(self, "maxW") or not hasattr(self, "maxH"):
@@ -612,12 +613,14 @@ class Selector(lw.Widget):
         rectangle_size = self._get_rectangle_size()
         self._total_height = maxH
         self._total_width = self.padding * 2 + rectangle_size + maxW
+        context.rectangle(-2,-2,self.total_width + 8, self.total_height + 6) 
+        context.set_source_rgb(0,0,0)
+        context.stroke_preserve()
+        context.set_source_rgb(*_background)
+        context.fill()
         line_color_rectangle = zip(self.options.items(),self._get_rectangle_list(self.options.keys()))
         for (line,color),rectangle in line_color_rectangle:
-            context.rectangle(rectangle.start.x,
-                        rectangle.start.y,
-                        rectangle.width,
-                        rectangle.height)
+            rectangle.draw_on_context(context)
             context.set_source_rgb(*color)
             context.fill_preserve()
             context.set_source_rgb(0,0,0)
@@ -805,6 +808,8 @@ class Guides(lw.Widget):
         self._number_width = int(ext[0] + ext[2])
         self._number_height = -int(ext[1]) 
         if self._cell_list_to_update:
+            max_numbers = max([len(line) for line in self.elements])
+            self.height = max_numbers * (self._number_height + self.font_size//2) + 5
             self._update_cell_list()
             self._cell_list_to_update = False
         
@@ -977,7 +982,7 @@ class MainArea(lw.UncheckedContainer):
     def start_selector(self,start=Point(0,0)):
         self.selector = Selector(start=start)
         self.selector.ID = "Selector"
-        self.add(self.selector)
+        self.add(self.selector,top=-1)
     
     def start_crucipixel(self,crucipixel:"core.CompleteCrucipixel",
                          start=Point(120,100),cell_size=20):
@@ -1010,6 +1015,7 @@ class CustomDebug(WidgetDebug):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.background_color = gtk_to_rgb(_background)
         def handle_set_text(value):
             self.text = value
         self.register_signal("debug_text",handle_set_text)
@@ -1023,7 +1029,7 @@ if __name__ == '__main__':
     debug.translate(200,10)
     main_area = MainArea()
     main_area.translate(.5,.5)
-    main_area.add(debug)
+    main_area.add(debug,top=-1)
     root.set_child(main_area)
     with open("test.tmp","r") as f:
         cruci = core.Crucipixel.guides_from_file(f)
