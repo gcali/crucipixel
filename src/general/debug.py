@@ -7,12 +7,14 @@ Created on Apr 8, 2015
 import general.lightwidgets as lw
 from general.geometry import Point, Rectangle
 import math
+from general.support import rgb_to_gtk
 
 class WidgetDebug(lw.Widget):
     
     def __init__(self,
                  width,
                  height,
+                 background_color=None,
                  *args,
                  **kwargs):
         super().__init__(*args, **kwargs)
@@ -23,6 +25,18 @@ class WidgetDebug(lw.Widget):
                                         width,
                                         height)
         self._text = ""
+        self._background_color=background_color
+    
+    @property
+    def background_color(self):
+        return self._background_color
+    
+    @background_color.setter
+    def background_color(self, value):
+        if value is None:
+            self._background_color = None
+        else:
+            self._background_color = rgb_to_gtk(value)
     
     @property
     def text(self):
@@ -57,10 +71,13 @@ class WidgetDebug(lw.Widget):
                 lines.append(bline)
                 
         context.set_font_size(self.font_size)
-        context.set_source_rgb(0,0,0)
         context.rectangle(.5, .5,
                           self.width - 1,
                           self.height - 1)
+        if not self.background_color is None:
+            context.set_source_rgb(*self.background_color)
+            context.fill_preserve()
+        context.set_source_rgb(0,0,0)
         context.stroke()
         context.move_to(.5,txt_height + .5)
         for i,line in enumerate(lines):

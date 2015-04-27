@@ -447,16 +447,21 @@ class Donut(Widget):
             w.invalidate()
         return True
     
+class DrawableRectangle(Rectangle):
+    
+    def draw_on_context(self, context):
+        context.rectangle(self.start.x, self.start.y, self.width, self.height)
+    
 class DrawableRoundedRectangle(RoundedRectangle):
     
     def draw_on_context(self, context):
         pi = math.pi
         context.new_sub_path()
-        start_x = self._start.x
-        start_y = self._start.y
-        radius = self._radius
-        width = self._width
-        height = self._height
+        start_x = self.start.x
+        start_y = self.start.y
+        radius = self.radius
+        width = self.width
+        height = self.height
         context.arc(start_x + width - radius, start_y + radius, radius, -pi/2, 0)
         context.arc(start_x + width - radius, start_y + height - radius, radius, 0, pi/2)
         context.arc(start_x + radius, start_y + height - radius, radius, pi/2, pi)
@@ -476,7 +481,7 @@ class Button(Widget):
         self.label = label
         self.background_color = background_color
         self.label_color = label_color
-        self._shape = DrawableRoundedRectangle(0,0,size_x, size_y)
+        self._shape = DrawableRoundedRectangle(Point(0,0),size_x, size_y)
     
     @property
     def background_color(self):
@@ -651,20 +656,11 @@ class UncheckedContainer(Container):
         for (_,w) in self._widget_list:
             yield w
     
-    def add(self,widget):
-        self._widget_list.append((widget,widget))
+    def add(self,widget,top=0):
+        self._widget_list.append((top,widget))
+        self._widget_list = sorted(self._widget_list,key=lambda x:-x[0])
         widget.father = self
         return widget
-    
-    def remove_id(self, id_v:"id"):
-        index = None
-        for (pos,(i,_)) in enumerate(self._widget_list):
-            if i == id_v:
-                index = pos
-                break
-        if index is None:
-            raise KeyError("{} not found".format(id))
-        del(self._widget_list[index])
     
     def remove_obj(self, widget):
         index = None

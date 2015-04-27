@@ -84,37 +84,47 @@ class Rectangle:
 
 class RoundedRectangle:
     
-    def __init__(self, start_x, start_y, width, height):
-        self._start = Point(start_x, start_y)
-        self._width = width
-        self._height = height
-        self._radius = min(self._width / 2, self._height / 2, 10)
+    def __init__(self, start:"Point", width, height, radius=None):
+        self.start = start
+        self.width = width
+        self.height = height
+        self._radius = radius
     
-    def is_point_in(self, p:"Point"):
-        main_rectangle = Rectangle(self._start, self._width, self._height)
+    @property
+    def radius(self):
+        if self._radius is None:
+            return min(self.width / 2, self.height / 2, 10)
+        else:
+            return self._radius
+    @radius.setter
+    def radius(self,value):
+        self._radius = value
+    
+    def is_point_in(self, p:"Point",delta=0):
+        main_rectangle = Rectangle(self.start, self.width, self.height)
+        radius = self._radius
         if not main_rectangle.is_point_in(p):
             return False
-        thin_rectangle = Rectangle(Point(self._start.x + self._radius, self._start.y), 
-                                   self._width - 2*self._radius, 
-                                   self._height)
+        thin_rectangle = Rectangle(Point(self.start.x + radius, self.start.y), 
+                                   self.width - 2*radius, 
+                                   self.height)
         if thin_rectangle.is_point_in(p):
             return True
-        short_rectangle = Rectangle(Point(self._start.x, self._start.y + self._radius),
-                                    self._width,
-                                    self._height - 2*self._radius)
+        short_rectangle = Rectangle(Point(self.start.x, self.start.y + radius),
+                                    self.width,
+                                    self.height - 2*radius)
         if short_rectangle.is_point_in(p):
             return True 
         def check_circle(p:"Point", center:"Point", radius):
             return (p.x - center.x)**2 + (p.y - center.y)**2 <= radius**2
-        radius = self._radius
         if check_circle(p, Point(radius,radius), radius):
             return True
-        elif check_circle(p, Point(self._start.x + self._width - radius, radius), radius):
+        elif check_circle(p, Point(self.start.x + self.width - radius, radius), radius):
             return True
-        elif check_circle(p, Point(self._start.x + self._width - radius,
-                                   self._start.y + self._height - radius),
+        elif check_circle(p, Point(self.start.x + self.width - radius,
+                                   self.start.y + self.height - radius),
                           radius):
             return True
-        elif check_circle(p, Point(radius, self._start.y + self._height - radius), radius):
+        elif check_circle(p, Point(radius, self.start.y + self.height - radius), radius):
             return True
         return False
