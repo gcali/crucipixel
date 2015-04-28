@@ -522,10 +522,9 @@ class Button(Widget):
         c.fill()
         
         xb, yb, width, height, _, _ = c.text_extents(self.label)
-        total_width = width - xb
-        total_height = height + yb
-        start_x = (self._size.x - total_width)/2 + xb
-        start_y = (self._size.y - total_height)/2 - yb
+        print(xb,yb,width,height)
+        start_x = (self._size.x - width)/2 + xb
+        start_y = (self._size.y - height)/2 - yb
         print(start_x, start_y)
         c.move_to(start_x,start_y)
         c.set_source_rgb(*self.label_color)
@@ -704,8 +703,10 @@ if __name__ == '__main__':
     donut = Donut(Point(200,200), 50, 150)
     circle = Circle(100)
     circle.translate(200,200)
+    button = Button("I'm a button", 100, 50)
+    button.translate(50,50)
     cont_b = UncheckedContainer()
-    cont_b.add(circle)
+    cont_b.add(button)
     cont = UncheckedContainer()
     cont.add(donut)
     root.child=cont
