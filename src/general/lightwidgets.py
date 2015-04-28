@@ -107,6 +107,8 @@ class Root(Gtk.DrawingArea):
         self.connect("key-press-event", self.on_key_down)
         self.connect("key-release-event", self.on_key_up)
         self.set_min_size(width,height)
+        self._switcher = _RootChildSwitcher()
+        self._switcher.father = self
         self._lw_signals = {}
         
     @property
@@ -178,7 +180,9 @@ class Root(Gtk.DrawingArea):
         for w in self._lw_signals[signal_name]:
             w.handle_signal(signal_name,*args)
     
-
+    def register_switch_to(self, signal_name:"str", widget:"Widget"):
+        return self._switcher.register_switch_to(signal_name, widget)
+    
 class Widget:
     
     NO_CLIP=None
@@ -352,6 +356,17 @@ class Widget:
     
     def emit_lw_signal(self,dest:"Widget",signal_name,*args):
         dest.handle_signal(signal_name,*args)
+
+class _RootChildSwitcher(Widget):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args,**kwargs)
+    
+    def register_switch_to(self, signal_name:"str", widget:"Widget"):
+        def switch():
+            self.father.child = widget
+            self.father.invalidate()
+        self.register_signal(signal_name, switch)
 
 
 class Circle(Widget):
@@ -687,7 +702,10 @@ if __name__ == '__main__':
     root = Root(600,600)
     main.add(root)
     donut = Donut(Point(200,200), 50, 150)
-    donut_b = Donut(Point(300,300), 50, 150)
+    circle = Circle(100)
+    circle.translate(200,200)
+    cont_b = UncheckedContainer()
+    cont_b.add(circle)
     cont = UncheckedContainer()
     cont.add(donut)
     root.child=cont
@@ -711,6 +729,9 @@ if __name__ == '__main__':
                                                          assign)
         new_animation.widget = donut
         animator.add_animation(new_animation)
+    def clean():
+        donut.broadcast_lw_signal("change_to_b")
+    root.register_switch_to("change_to_b", cont_b)
     animation = Slide.calculateAcceleration(2*duration,
                                             start_point, 
                                             speed, 
