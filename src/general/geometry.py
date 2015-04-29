@@ -102,7 +102,7 @@ class RoundedRectangle:
     
     def is_point_in(self, p:"Point",delta=0):
         main_rectangle = Rectangle(self.start, self.width, self.height)
-        radius = self._radius
+        radius = self.radius
         if not main_rectangle.is_point_in(p):
             return False
         thin_rectangle = Rectangle(Point(self.start.x + radius, self.start.y), 
@@ -128,3 +128,10 @@ class RoundedRectangle:
         elif check_circle(p, Point(radius, self.start.y + self.height - radius), radius):
             return True
         return False
+
+    def get_vertexes(self):
+        return [self.start,
+                Point(self.start.x + self.width,self.start.y),
+                Point(self.start.x,self.start.y + self.height),
+                Point(self.start.x + self.width,self.start.y + self.height)
+                ]

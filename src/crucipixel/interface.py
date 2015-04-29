@@ -4,6 +4,7 @@ Created on Feb 22, 2015
 @author: giovanni
 '''
 
+import types
 import math
 import cairo
 from gi.repository import Gtk,Gdk
@@ -13,7 +14,7 @@ from general.support import get_from_to_inclusive, DefaultDict, clamp,\
                             rgb_to_gtk, Bunch, gtk_to_rgb
 from collections import OrderedDict
 from general.lightwidgets import MouseEvent, DrawableRoundedRectangle,\
-    DrawableRectangle
+    DrawableRectangle, UncheckedContainer, Button
 from crucipixel import core
 from general.animator import Animator, AccMovement
 from general.debug import WidgetDebug
@@ -56,6 +57,51 @@ for (k,v) in _keys_r.items():
 del _keys_r 
 
 global_animator = Animator() 
+
+class MainMenu(UncheckedContainer):
+    
+    def __init__(self, button_width,
+                       button_height, 
+                       entries:"[str]"=[], 
+                       distance=20,
+                       *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._button_width = button_width
+        self._button_height = button_height
+        self.distance = distance
+        self._buttons = [Button(label=text,size_x=button_width,size_y=button_height) for text in entries]
+        
+        for b in self._buttons:
+            b.on_mouse_down = types.MethodType(lambda self,widget,event: self.broadcast_lw_signal("new_scheme"),b)
+            self.add(b)
+    
+    @property
+    def min_size(self):
+        return (self._button_width + 2 * self.distance,
+                (self._button_height + 2*self.distance) * len(self._buttons))
+        
+    
+    def on_draw(self, widget, context):
+        if not self._buttons:
+            return
+        total_width, total_height = self.container_size
+        total_button_width = self._button_width
+        total_button_height = (self.distance + self._button_height) * len(self._buttons) 
+        def padding(container,widget):
+            if container < widget:
+                return 0
+            else:
+                return (container-widget)//2
+        upper_padding = max(padding(total_height,total_button_height),self.distance)
+        print(upper_padding)
+        left_padding = padding(total_width,total_button_width)
+        translate_x = left_padding
+        translate_y = upper_padding
+        for b in self._buttons:
+            b.set_translate(translate_x,translate_y)
+            translate_y += self._button_height + self.distance
+        super().on_draw(widget, context)
+    
 
 class CrucipixelGrid(lw.Widget):
     
@@ -970,8 +1016,8 @@ class CompleteCrucipixel(lw.UncheckedContainer):
         
 class MainArea(lw.UncheckedContainer):
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
         self.ID = "MainArea"
         self.core_crucipixel = None
         self.selector = None
@@ -1024,19 +1070,23 @@ class CustomDebug(WidgetDebug):
 if __name__ == '__main__':
     win = lw.MainWindow(title="CompleteCrucipixel Dev")
     win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.9,.9,.9,1))
-    root = lw.Root(500,500)
+    root = lw.Root()
+
+    main_area = MainArea(min_size=(500,500))
     debug = CustomDebug(width=100,height=30)
     debug.translate(200,10)
-    main_area = MainArea()
-    main_area.translate(.5,.5)
     main_area.add(debug,top=-1)
-    root.set_child(main_area)
+    main_area.translate(.5,.5)
     with open("test.tmp","r") as f:
         cruci = core.Crucipixel.guides_from_file(f)
     main_area.start_crucipixel(cruci)
     main_area.start_selector()
+    root.register_switch_to("new_scheme", main_area)
+#     root.set_child(main_area)
 
-    win.add(root)
+    print(gtk_to_rgb(_start_default))
+    root.set_child(MainMenu(button_width=100,button_height=30,entries=["ciao"]))
+    root.set_main_window(win)
     root.grab_focus()
     global_animator.start()
     win.start_main()

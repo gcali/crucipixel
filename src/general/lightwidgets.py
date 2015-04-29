@@ -97,7 +97,8 @@ class Root(Gtk.DrawingArea):
                  | EventMask.BUTTON_RELEASE_MASK\
                  | EventMask.POINTER_MOTION_MASK\
                  | EventMask.KEY_PRESS_MASK\
-                 | EventMask.KEY_RELEASE_MASK
+                 | EventMask.KEY_RELEASE_MASK\
+                 | EventMask.STRUCTURE_MASK
         self.add_events(events)
         self.set_can_focus(True)
         self.connect("draw", self.on_draw)
@@ -106,10 +107,13 @@ class Root(Gtk.DrawingArea):
         self.connect("motion-notify-event", self.on_mouse_move)
         self.connect("key-press-event", self.on_key_down)
         self.connect("key-release-event", self.on_key_up)
+        self.connect("configure-event", self.on_new_configuration)
         self.set_min_size(width,height)
+        self.current_size = (width,height)
         self._switcher = _RootChildSwitcher()
         self._switcher.father = self
         self._lw_signals = {}
+        self._main_window = None
         
     @property
     def child(self):
@@ -119,13 +123,27 @@ class Root(Gtk.DrawingArea):
     def child(self, value):
         self._child = value
         value.father = self
+        if hasattr(value,"min_size"):
+            size_x,size_y =  value.min_size
+            self.set_min_size(size_x, size_y)
+        
+    @property
+    def window_size(self):
+        return self.current_size
+    
+    @property
+    def container_size(self):
+        return self.window_size
+    
+    def set_main_window(self, window):
+        window.add(self)
+        self._main_window = window
         
     def set_min_size(self, sizeX:"num", sizeY:"num"):
         self.set_size_request(sizeX, sizeY)
     
     def set_child(self, child:"Widget"):
-        self._child = child
-        child.father = self
+        self.child = child
     
     def on_draw(self, widget:"Widget", context:"cairo.Context"):
         context.save()
@@ -163,6 +181,9 @@ class Root(Gtk.DrawingArea):
         self._child.on_key_up(self,_transform_keyboard_event("key_up",e))
         return True
     
+    def on_new_configuration(self,widget:"Gtk.Widget",event:"Gdk.EventConfigure"):
+        self.current_size = (event.width,event.height)
+    
     def invalidate(self):
         self.queue_draw()
     
@@ -187,7 +208,7 @@ class Widget:
     
     NO_CLIP=None
 
-    def __init__(self, sizeX=0, sizeY=0):
+    def __init__(self, sizeX=0, sizeY=0, min_size=None):
         self.cell_size = (sizeX,sizeY)
         self.ID = "Widget"
         self.signals = {} 
@@ -203,6 +224,9 @@ class Widget:
         self._clip_width = Widget.NO_CLIP
         self._clip_height = Widget.NO_CLIP
         self._mouse_is_in = False
+        
+        if not min_size is None:
+            self.min_size = min_size
     
     def __str__(self):
         return str(self.ID)
@@ -240,6 +264,12 @@ class Widget:
 #             print(self,"Adding signal {} to {}".format(signal,str(value)))
             value.register_signal_for_child(signal,self)
         self._father = value
+        
+    @property
+    def container_size(self):
+        if self.father is None:
+            raise AttributeError
+        return self.father.container_size
     
     
     @property
@@ -488,7 +518,7 @@ class Button(Widget):
     
     def __init__(self, label:"str", 
                  size_x:"int", size_y:"int", 
-                 background_color=(80,80,80), 
+                 background_color=(150,150,150), 
                  label_color = (0,0,0),
                  **kwargs):
         super().__init__(**kwargs)
@@ -522,10 +552,13 @@ class Button(Widget):
         c.fill()
         
         xb, yb, width, height, _, _ = c.text_extents(self.label)
-        print(xb,yb,width,height)
+        if not self.is_clip_set():
+            self.clip_rectangle = self._shape
+            
+#         print(xb,yb,width,height)
         start_x = (self._size.x - width)/2 + xb
         start_y = (self._size.y - height)/2 - yb
-        print(start_x, start_y)
+#         print(start_x, start_y)
         c.move_to(start_x,start_y)
         c.set_source_rgb(*self.label_color)
         c.show_text(self.label)
@@ -634,12 +667,12 @@ class Container(Widget):
     def is_clip_set(self):
         if super().is_clip_set():
             return True
-        if not self.list:
-            return False
+        found_one = False
         for child in self.list:
+            found_one = True
             if not child.is_clip_set():
                 return False
-        return True
+        return found_one
     
     @property
     def clip_rectangle(self):
@@ -699,7 +732,8 @@ class MainWindow(Gtk.Window):
 if __name__ == '__main__':
     main = MainWindow("Animated donut")
     root = Root(600,600)
-    main.add(root)
+    root.set_main_window(main)
+#     main.add(root)and 
     donut = Donut(Point(200,200), 50, 150)
     circle = Circle(100)
     circle.translate(200,200)
@@ -723,7 +757,7 @@ if __name__ == '__main__':
         pos = p
     def clean():
         global pos
-        print(pos,start_point)
+#         print(pos,start_point)
         new_animation = Slide.calculateAccelerationSpeed(2,
                                                          pos, 
                                                          start_point, 
@@ -732,6 +766,7 @@ if __name__ == '__main__':
         animator.add_animation(new_animation)
     def clean():
         donut.broadcast_lw_signal("change_to_b")
+#         print(root.window_size)
     root.register_switch_to("change_to_b", cont_b)
     animation = Slide.calculateAcceleration(2*duration,
                                             start_point, 
