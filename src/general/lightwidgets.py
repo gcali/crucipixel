@@ -11,7 +11,7 @@ from math import pi,sqrt
 from general.geometry import Point, Rectangle, RoundedRectangle
 from _operator import pos 
 from gi.overrides.Gdk import Gdk
-from general.animator import Animator, Slide, StopAnimation, AccMovement
+from general.animator import Animator, Slide, StopAnimation
 from general.support import rgb_to_gtk
 import math
 
