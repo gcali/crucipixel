@@ -226,10 +226,25 @@ class Widget:
         self._mouse_is_in = False
         
         if not min_size is None:
-            self.min_size = min_size
+            self._min_size = min_size
     
     def __str__(self):
         return str(self.ID)
+    
+    @property
+    def min_size(self):
+        return self._min_size
+    
+    @min_size.setter
+    def min_size(self,value):
+        self._min_size = value
+        self.refresh_min_size()
+    
+    def refresh_min_size(self):
+        try:
+            self.father.update_min_size(self,self.min_size)
+        except AttributeError:
+            pass
 
     @property
     def mouse_is_in(self):
@@ -284,6 +299,11 @@ class Widget:
         return self._toRotate.multiply(self._toTranslate.multiply(self._toScale))
         return self._toTranslate.multiply(self._toRotate.multiply(self._toScale))
     
+    @property
+    def allocated_size(self):
+        if not self.father is None:
+            return self.father.get_allocated_size(self)
+    
     def rotate(self,angle):
         self._fromRotate.rotate(angle)
         self._toRotate.rotate(-angle)
@@ -313,9 +333,13 @@ class Widget:
         return Rectangle(self._clip_start,self._clip_width,self._clip_height)
     @clip_rectangle.setter
     def clip_rectangle(self,value):
-        self._clip_start = value.start
-        self._clip_width = value.width
-        self._clip_height = value.height
+        if value is None:
+            print("Setting!")
+            self._clip_start = None
+        else:
+            self._clip_start = value.start
+            self._clip_width = value.width
+            self._clip_height = value.height
 
     def get_vertexes(self):
         return [self._clip_start,
@@ -396,6 +420,7 @@ class _RootChildSwitcher(Widget):
         def switch():
             self.father.child = widget
             self.father.invalidate()
+            print("I'm switching!")
         self.register_signal(signal_name, switch)
 
 
@@ -527,6 +552,8 @@ class Button(Widget):
         self.background_color = background_color
         self.label_color = label_color
         self._shape = DrawableRoundedRectangle(Point(0,0),size_x, size_y)
+        self.force_clip_not_set = False
+        self._button_mouse_was_down = False
     
     @property
     def background_color(self):
@@ -552,7 +579,7 @@ class Button(Widget):
         c.fill()
         
         xb, yb, width, height, _, _ = c.text_extents(self.label)
-        if not self.is_clip_set():
+        if (not self.force_clip_not_set) and not self.is_clip_set():
             self.clip_rectangle = self._shape
             
 #         print(xb,yb,width,height)
@@ -564,8 +591,14 @@ class Button(Widget):
         c.show_text(self.label)
         c.restore()
     
+    def on_mouse_down(self, w, e):
+        print("I've been called!")
+        super().on_mouse_down(w, e)
+        self._button_mouse_was_down = True
+        print(self)
+    
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
-        if category == MouseEvent.MOUSE_UP:
+        if category == MouseEvent.MOUSE_UP and self._button_mouse_was_down:
             return True
         return self._shape.is_point_in(p) 
 
@@ -574,10 +607,15 @@ class Container(Widget):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.ID = "Container"
+        self._sizes = {}
     
     @property
     def list(self):
         raise NotImplementedError()
+    
+    @property
+    def sizes(self):
+        return self._sizes
     
     def add(self,widget) -> "id":
         raise NotImplementedError()
@@ -599,6 +637,15 @@ class Container(Widget):
                 context.clip() 
             child.on_draw(self,context)
             context.restore()
+    
+    def update_min_size(self, widget, value):
+        self.sizes[widget] = value
+    
+    def get_allocated_size(self, widget):
+        try:
+            self.sizes[widget]
+        except KeyError:
+            raise AttributeError()
     
     def _handle_mouse_event(self,widget,event,callback,category):
         for child in reversed(list(self.list)):
@@ -707,6 +754,10 @@ class UncheckedContainer(Container):
         self._widget_list.append((top,widget))
         self._widget_list = sorted(self._widget_list,key=lambda x:-x[0])
         widget.father = self
+        try:
+            self.sizes[widget] = widget.min_size
+        except AttributeError:
+            pass
         return widget
     
     def remove_obj(self, widget):

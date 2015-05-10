@@ -60,6 +60,8 @@ global_animator = Animator()
 
 class MainMenu(UncheckedContainer):
     
+    def on_mouse_down(self, w, e):
+        return UncheckedContainer.on_mouse_down(self, w, e)   
     def __init__(self, button_width,
                        button_height, 
                        entries:"[str]"=[], 
@@ -72,8 +74,15 @@ class MainMenu(UncheckedContainer):
         self._buttons = [Button(label=text,size_x=button_width,size_y=button_height) for text in entries]
         
         for b in self._buttons:
-            b.on_mouse_down = types.MethodType(lambda self,widget,event: self.broadcast_lw_signal("new_scheme"),b)
+            b.ID = "Button"
+            def mouse_up(new_self,widget,event):
+                if new_self._button_mouse_was_down:
+                    self.broadcast_lw_signal("new_scheme")
+                Button.on_mouse_up(new_self,widget,event)
+            b.on_mouse_up = types.MethodType(mouse_up,b)
+            b.force_clip_not_set = True
             self.add(b)
+        self.refresh_min_size()
     
     @property
     def min_size(self):
@@ -93,11 +102,11 @@ class MainMenu(UncheckedContainer):
             else:
                 return (container-widget)//2
         upper_padding = max(padding(total_height,total_button_height),self.distance)
-        print(upper_padding)
         left_padding = padding(total_width,total_button_width)
         translate_x = left_padding
         translate_y = upper_padding
         for b in self._buttons:
+            print(b.is_clip_set())
             b.set_translate(translate_x,translate_y)
             translate_y += self._button_height + self.distance
         super().on_draw(widget, context)
@@ -1065,6 +1074,8 @@ class CustomDebug(WidgetDebug):
         def handle_set_text(value):
             self.text = value
         self.register_signal("debug_text",handle_set_text)
+
+#DRAFT-2015
         
 
 if __name__ == '__main__':
