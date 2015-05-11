@@ -554,6 +554,7 @@ class Button(Widget):
         self._shape = DrawableRoundedRectangle(Point(0,0),size_x, size_y)
         self.force_clip_not_set = False
         self._button_mouse_was_down = False
+        self._on_mouse_up_broadcast = None
     
     @property
     def background_color(self):
@@ -571,6 +572,18 @@ class Button(Widget):
     def label_color(self,value):
         self._label_color = rgb_to_gtk(value)
     
+    @property
+    def on_mouse_up_broadcast(self):
+        return self._on_mouse_up_broadcast
+    
+    @on_mouse_up_broadcast.setter
+    def on_mouse_up_broadcast(self,value):
+        self._on_mouse_up_broadcast = value
+    
+    @on_mouse_up_broadcast.deleter
+    def on_mouse_up_broadcast(self):
+        self._on_mouse_up_broadcast = None
+
     def on_draw(self, w, c):
         super().on_draw(w, c)
         c.save()
@@ -596,6 +609,12 @@ class Button(Widget):
         super().on_mouse_down(w, e)
         self._button_mouse_was_down = True
         print(self)
+    
+    def on_mouse_up(self, w, e):
+        super().on_mouse_up(w,e)
+        if not self.on_mouse_up_broadcast is None:
+            self.broadcast_lw_signal(self.on_mouse_up_broadcast)
+        self._button_mouse_was_down = False
     
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
         if category == MouseEvent.MOUSE_UP and self._button_mouse_was_down:

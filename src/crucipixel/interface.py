@@ -11,7 +11,7 @@ from gi.repository import Gtk,Gdk
 from general.geometry import Point, Rectangle, RoundedRectangle
 import general.lightwidgets as lw
 from general.support import get_from_to_inclusive, DefaultDict, clamp,\
-                            rgb_to_gtk, Bunch, gtk_to_rgb
+                            rgb_to_gtk, Bunch, gtk_to_rgb, add_method
 from collections import OrderedDict
 from general.lightwidgets import MouseEvent, DrawableRoundedRectangle,\
     DrawableRectangle, UncheckedContainer, Button
@@ -66,6 +66,7 @@ class MainMenu(UncheckedContainer):
                        button_height, 
                        entries:"[str]"=[], 
                        distance=20,
+                       broadcasts:"[str]"=[],
                        *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._button_width = button_width
@@ -73,15 +74,14 @@ class MainMenu(UncheckedContainer):
         self.distance = distance
         self._buttons = [Button(label=text,size_x=button_width,size_y=button_height) for text in entries]
         
-        for b in self._buttons:
-            b.ID = "Button"
-            def mouse_up(new_self,widget,event):
-                if new_self._button_mouse_was_down:
-                    self.broadcast_lw_signal("new_scheme")
-                Button.on_mouse_up(new_self,widget,event)
-            b.on_mouse_up = types.MethodType(mouse_up,b)
+        for i,b in enumerate(self._buttons):
+            b.ID = "Button{}".format(i)
             b.force_clip_not_set = True
             self.add(b)
+        if broadcasts:
+            for button,name in zip(self._buttons,broadcasts):
+                if name != None and name != "":
+                    button.on_mouse_up_broadcast = name
         self.refresh_min_size()
     
     @property
@@ -106,7 +106,6 @@ class MainMenu(UncheckedContainer):
         translate_x = left_padding
         translate_y = upper_padding
         for b in self._buttons:
-            print(b.is_clip_set())
             b.set_translate(translate_x,translate_y)
             translate_y += self._button_height + self.distance
         super().on_draw(widget, context)
@@ -1096,7 +1095,12 @@ if __name__ == '__main__':
 #     root.set_child(main_area)
 
     print(gtk_to_rgb(_start_default))
-    root.set_child(MainMenu(button_width=100,button_height=30,entries=["ciao"]))
+    entries=["New Game",
+             "Options",
+             "Exit"]
+    root.set_child(MainMenu(button_width=100,button_height=30,
+                            entries=entries,
+                            broadcasts=["new_scheme"]))
     root.set_main_window(win)
     root.grab_focus()
     global_animator.start()
