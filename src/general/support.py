@@ -5,8 +5,8 @@ Created on Feb 25, 2015
 '''
 import types
 
-def add_method(object, name, method):
-    setattr(object,name,types.MethodType(method,object))
+def add_method(obj, name, method):
+    setattr(obj,name,types.MethodType(method,obj))
 
 def get_step(a,b):
     if b >= a:
