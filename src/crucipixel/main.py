@@ -5,7 +5,7 @@ Created on Feb 22, 2015
 '''
 
 from general import lightwidgets as lw
-from crucipixel.interface.puzzle_stage import MainArea
+from crucipixel.interface.puzzle_stage.complete import MainArea
 from general.debug import WidgetDebug
 from crucipixel.interface import global_constants
 from general.support import gtk_to_rgb
