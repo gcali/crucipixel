@@ -4,14 +4,15 @@ Created on May 19, 2015
 @author: giovanni
 '''
 
-from general import lightwidgets as lw
-from general.geometry import Point, Rectangle
+from lightwidgets.geometry import Point, Rectangle
 from collections import OrderedDict
-from general.lightwidgets import DrawableRoundedRectangle, MouseEvent
+from lightwidgets.stock_widgets.geometrical import DrawableRoundedRectangle
+from lightwidgets.events import MouseEvent
 import math
 from crucipixel.interface import global_constants
+from lightwidgets.stock_widgets.widget import Widget
 
-class Selector(lw.Widget):
+class Selector(Widget):
     
     def __init__(self,start=Point(0,0),options=None,*args,**kwargs):
         super().__init__(*args,**kwargs) 

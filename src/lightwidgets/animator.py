@@ -3,10 +3,10 @@ Created on Mar 23, 2015
 
 @author: giovanni
 '''
-from threading import Lock, Condition, Thread, RLock
+from threading import Lock, Condition, Thread
 import time
-from general.geometry import Point
-from general.physics import get_speed_from_uniform_acceleration,\
+from lightwidgets.geometry import Point
+from lightwidgets.physics import get_speed_from_uniform_acceleration,\
     get_position_from_uniform_acceleration, get_position_from_uniform_speed
 
 class Animator:

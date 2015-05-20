@@ -4,15 +4,15 @@ Created on May 19, 2015
 @author: giovanni
 '''
 
-from general import lightwidgets as lw
-from general.geometry import Point, Rectangle
+from lightwidgets.geometry import Point, Rectangle
 from crucipixel.interface import global_constants
-from general.support import DefaultDict, clamp, get_from_to_inclusive
+from lightwidgets.support import DefaultDict, clamp, get_from_to_inclusive
 from crucipixel import core
 import cairo
-from general.lightwidgets import MouseEvent
+from lightwidgets.events import MouseEvent
+from lightwidgets.stock_widgets.widget import Widget
 
-class CrucipixelGrid(lw.Widget):
+class CrucipixelGrid(Widget):
     
     SELECTION_FREE = 0
     SELECTION_LINE = 1

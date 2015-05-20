@@ -4,15 +4,15 @@ Created on May 19, 2015
 @author: giovanni
 '''
 
-import general.lightwidgets as lw
-from general.geometry import Point
+from lightwidgets.geometry import Point
 from gi.overrides import Gdk
-from general.support import Bunch
-from general.animator import AccMovement
+from lightwidgets.support import Bunch
+from lightwidgets.animator import AccMovement
 from crucipixel.interface import global_constants
 from crucipixel.interface.puzzle_stage.guides import Guides
 from crucipixel.interface.puzzle_stage.grid import CrucipixelGrid
 from crucipixel.interface.puzzle_stage.selector import Selector
+from lightwidgets.stock_widgets.containers import UncheckedContainer
 
 def gdk_color(*args):
     if len(args) == 1:
@@ -21,8 +21,7 @@ def gdk_color(*args):
         r,g,b = args
     return Gdk.Color.from_floats(r, g, b) 
 
-class CompleteCrucipixel(lw.UncheckedContainer):
-    
+class CompleteCrucipixel(UncheckedContainer): 
 
     def _init_guides(self, crucipixel):
         self.horizontal_guide = Guides(start=Point(0, 0), elements=crucipixel.row_guides, 
@@ -158,7 +157,7 @@ class CompleteCrucipixel(lw.UncheckedContainer):
     def on_mouse_exit(self):
         return super().on_mouse_exit()
         
-class MainArea(lw.UncheckedContainer):
+class MainArea(UncheckedContainer):
     
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)

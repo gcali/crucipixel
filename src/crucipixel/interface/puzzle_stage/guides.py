@@ -4,10 +4,10 @@ Created on May 19, 2015
 @author: giovanni
 '''
 
-from general import lightwidgets as lw
-from general.geometry import Point, Rectangle
-from general.support import rgb_to_gtk
-from general.lightwidgets import MouseEvent
+from lightwidgets.geometry import Point, Rectangle
+from lightwidgets.support import rgb_to_gtk
+from lightwidgets.events import MouseEvent
+from lightwidgets.stock_widgets.widget import Widget
 
 class GuideCell:
     
@@ -40,7 +40,7 @@ class GuideElement:
         return str(self.value)
         
 
-class Guides(lw.Widget): 
+class Guides(Widget): 
     VERTICAL = 0
     HORIZONTAL = 1
     

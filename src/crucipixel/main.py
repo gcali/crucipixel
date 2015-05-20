@@ -4,15 +4,15 @@ Created on Feb 22, 2015
 @author: giovanni
 '''
 
-from general import lightwidgets as lw
 from crucipixel.interface.puzzle_stage.complete import MainArea
-from general.debug import WidgetDebug
+from lightwidgets.debug import WidgetDebug
 from crucipixel.interface import global_constants
-from general.support import gtk_to_rgb
+from lightwidgets.support import gtk_to_rgb
 from gi.overrides import Gdk
 from gi.overrides.Gtk import Gtk
 from crucipixel import core
 from crucipixel.interface.main_menu import MainMenu
+from lightwidgets.stock_widgets.root import MainWindow, Root
 
 #DRAFT-2015
 
@@ -29,9 +29,9 @@ class CustomDebug(WidgetDebug):
         
 
 if __name__ == '__main__':
-    win = lw.MainWindow(title="CompleteCrucipixel Dev")
+    win = MainWindow(title="CompleteCrucipixel Dev")
     win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.9,.9,.9,1))
-    root = lw.Root()
+    root = Root()
 
     main_area = MainArea(min_size=(500,500))
     debug = CustomDebug(width=100,height=30)

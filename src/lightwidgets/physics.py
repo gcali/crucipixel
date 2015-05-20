@@ -4,7 +4,7 @@ Created on Mar 27, 2015
 @author: giovanni
 '''
 
-from general.geometry import Point
+from lightwidgets.geometry import Point
 
 def get_speed_from_uniform_acceleration(start_speed:"Point",
                                         acc:"Point",

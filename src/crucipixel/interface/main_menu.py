@@ -3,7 +3,8 @@ Created on May 19, 2015
 
 @author: giovanni
 '''
-from general.lightwidgets import UncheckedContainer, Button
+from lightwidgets.stock_widgets.containers import UncheckedContainer
+from lightwidgets.stock_widgets.buttons import Button
 
 
 

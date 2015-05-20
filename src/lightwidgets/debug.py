@@ -4,12 +4,13 @@ Created on Apr 8, 2015
 @author: giovanni
 '''
 
-import general.lightwidgets as lw
-from general.geometry import Point, Rectangle
+from lightwidgets.geometry import Point, Rectangle
 import math
-from general.support import rgb_to_gtk
+from lightwidgets.support import rgb_to_gtk
+from lightwidgets.stock_widgets.widget import Widget
+from lightwidgets.stock_widgets.root import MainWindow, Root
 
-class WidgetDebug(lw.Widget):
+class WidgetDebug(Widget):
     
     def __init__(self,
                  width,
@@ -85,8 +86,8 @@ class WidgetDebug(lw.Widget):
             context.show_text(line)
 
 if __name__ == '__main__':
-    main_win = lw.MainWindow(title="Debug test")
-    root = lw.Root(100, 100)
+    main_win = MainWindow(title="Debug test")
+    root = Root(100, 100)
     main_win.add(root)
     debug = WidgetDebug(70,50)
     debug.translate(10,10)

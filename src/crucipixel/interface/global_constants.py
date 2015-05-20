@@ -3,8 +3,9 @@ Created on May 19, 2015
 
 @author: giovanni
 '''
-from general.support import rgb_to_gtk
-from general.animator import Animator
+from lightwidgets.support import rgb_to_gtk
+from lightwidgets.animator import Animator
+from lightwidgets.geometry import Point
 
 _background = (.9,.9,.9)
 _start_selected = (.3,.3,.3)
@@ -30,3 +31,5 @@ for (k,v) in _keys_r.items():
 del _keys_r 
 
 global_animator = Animator() 
+
+menu_button_dim = Point(100,30)
