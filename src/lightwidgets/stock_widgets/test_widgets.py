@@ -9,7 +9,9 @@ from lightwidgets.geometry import Point
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.buttons import Button
 from lightwidgets.stock_widgets.containers import UncheckedContainer
-from lightwidgets.animator import Animator, Slide, StopAnimation
+from lightwidgets.animator import Animator, Slide, StopAnimation, Animation
+from lightwidgets.support import string_size
+import itertools
 
 class Circle(Widget):
     
@@ -44,6 +46,48 @@ class Line(Widget):
         c.rectangle(self.startP.x, self.startP.y,width,height)
         c.clip()
 #         print(self,c.clip_extents())
+
+class BorderedString(Widget):
+    
+    def __init__(self, string:"str"="ciao", font_size=10):
+        super().__init__()
+        self.string = string
+        self.font_size = font_size
+    
+    
+    def on_draw(self, w, c):
+        Widget.on_draw(self, w, c)
+        c.set_font_size(self.font_size)
+        size = string_size(self.font_size,self.string)
+        c.save()
+        print(size.x,size.y)
+        c.rectangle(0,0,size.x,size.y)
+        c.stroke()
+        c.move_to(0,size.y)
+        c.show_text(self.string) 
+        import string
+        sizes = {}
+#         for symbol in itertools.chain(string.ascii_lowercase, string.ascii_uppercase, "0123456789 "):
+        for symbol in itertools.chain(",.;-><_!?@'"):
+            values = ([],[],[],[])
+            for font_size in range(10,20):
+                c.set_font_size(font_size)
+                for (s,v) in zip(values, c.text_extents(symbol)):
+                    s.append(v/font_size)
+            sizes[symbol] = [sum(l)/len(l) for l in values]
+        with open("textExtents", "w") as f:
+            for symbol in sorted(sizes.keys()):
+                s = sizes[symbol]
+                width = s[0] + s[2]
+                height = s[1]
+                lower_add = s[1] + s[3]
+                if symbol == ' ':
+                    print("Hi! {} {} {}".format(width, height, lower_add))
+                if lower_add < 1:
+                    lower_add = 0
+                print("  '{}' : [{},{},{}],".format(symbol, width, -height, lower_add), file=f) 
+        c.restore()
+            
 
 class Donut(Widget):
     
@@ -113,10 +157,12 @@ if __name__ == '__main__':
     donut = Donut(Point(200,200), 50, 150)
     circle = Circle(100)
     circle.translate(200,200)
-    button = Button("I'm a button", 100, 50)
-    button.translate(50,50)
+#     button = Button("I'm a button", 100, 50)
+#     button.translate(50,50)
     cont_b = UncheckedContainer()
-    cont_b.add(button)
+    text = BorderedString("ciao io sono una scritta,    e ho tanti spazi", font_size=20)
+    text.translate(20,50)
+    cont_b.add(text)
     cont = UncheckedContainer()
     cont.add(donut)
     root.child=cont
@@ -141,7 +187,26 @@ if __name__ == '__main__':
         new_animation.widget = donut
         animator.add_animation(new_animation)
     def clean():
+        class ChangeLetter(Animation):
+            def __init__(self, letters, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.letters = letters
+                self.index = 0
+                self.next = 1
+            def step(self, next_time):
+                current_t = next_time - self.start_time
+                if self.next <= current_t:
+                    text.string = self.letters[self.index]
+                    text.invalidate()
+                    self.index += 1
+                    self.next += 1
+                    if self.index >= len(self.letters):
+                        return False
+                return True 
         donut.broadcast_lw_signal("change_to_b")
+        import string
+        letters = list(itertools.chain(string.ascii_letters, "0123456789", " !,;_"))
+        animator.add_animation(ChangeLetter(letters))
 #         print(root.window_size)
     root.register_switch_to("change_to_b", cont_b)
     animation = Slide.calculateAcceleration(2*duration,
