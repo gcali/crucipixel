@@ -1,3 +1,6 @@
 __pycache__/
 *.tmp
 *.log
+.idea
+.project
+.pydevproject
