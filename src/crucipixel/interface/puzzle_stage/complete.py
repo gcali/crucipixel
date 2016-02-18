@@ -5,7 +5,7 @@ Created on May 19, 2015
 '''
 
 from lightwidgets.geometry import Point
-from gi.overrides import Gdk
+from gi.repository import Gdk
 from lightwidgets.support import Bunch
 from lightwidgets.animator import AccMovement
 from crucipixel.interface import global_constants
