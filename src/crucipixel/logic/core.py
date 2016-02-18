@@ -5,6 +5,8 @@ Created on Mar 13, 2015
 '''
 from itertools import zip_longest
 from sys import argv
+from typing import List, Tuple
+
 
 class Crucipixel:
     
@@ -36,13 +38,16 @@ class Crucipixel:
         return cls.guides_from_strings(rows, cols, row_guides_string, col_guides_string)
 
     def __init__(self,rows:"int >0",cols:"int >0",
-                 row_guides:"iter of iter of int >0",
-                 col_guides:"iter of iter of int >0"):
+                 row_guides:List[List[int]],
+                 col_guides:List[List[int]]):
         self.rows = rows
         self.cols = cols
         self.row_guides = [list(row) for row in row_guides]
         self.col_guides = [list(col) for col in col_guides]
-        self._matrix = [[Crucipixel.DEFAULT for j in range(self.cols)] for i in range(self.rows)]  # @UnusedVariable 
+        self._matrix = [
+            [Crucipixel.DEFAULT for j in range(self.cols)]
+            for i in range(self.rows)
+        ]
         
     @staticmethod
     def check_line_done(line,guide):
@@ -81,13 +86,13 @@ class Crucipixel:
                 return False
         return True 
     
-    def _get_row(self,row_id):
-        return self._matrix[row_id] 
+    def _get_row(self, row_id):
+        return self._matrix[row_id]
     
-    def _get_col(self,col_id):
+    def _get_col(self, col_id):
         return [self._matrix[i][col_id] for i in range(self.rows)]
     
-    def check_row_done(self,row_id):
+    def check_row_done(self, row_id):
         row = self._get_row(row_id)
         guide = self.row_guides[row_id]
         for e in row:
@@ -122,22 +127,22 @@ class Crucipixel:
                 return False
         return True
     
-    def update(self,cell_to_update:"iter"):
-        for (row,col,status) in cell_to_update:
-            self[row,col] = status
+    def update(self, cell_to_update: Tuple[int, int, int]):
+        for (row, col, status) in cell_to_update:
+            self[row, col] = status
         results_rows = []
         results_cols = []
         for row_id in range(self.rows):
             if not self.check_row_not_wrong(row_id):
-                results_rows.append(("wrong",row_id))
+                results_rows.append(("wrong", row_id))
             elif self.check_row_done(row_id):
-                results_rows.append(("done",row_id))
+                results_rows.append(("done", row_id))
         for col_id in range(self.cols):
             if not self.check_col_not_wrong(col_id):
-                results_cols.append(("wrong",col_id))
+                results_cols.append(("wrong", col_id))
             elif self.check_col_done(col_id):
-                results_cols.append(("done",col_id))
-        return (results_rows,results_cols)
+                results_cols.append(("done", col_id))
+        return results_rows, results_cols
     
     @staticmethod
     def _guide_from_string(string) -> "guide":
@@ -158,6 +163,7 @@ class Crucipixel:
     
     def __setitem__(self,key,value):
         i,j = key
+        print("set", i, j)
         self._matrix[i][j] = value
     
     def __str__(self):
