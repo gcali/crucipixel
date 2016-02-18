@@ -4,15 +4,17 @@ Created on Feb 22, 2015
 @author: giovanni
 '''
 
-from crucipixel.interface.puzzle_stage.complete import MainArea
-from lightwidgets.debug import WidgetDebug
-from crucipixel.interface import global_constants
-from lightwidgets.support import gtk_to_rgb
-from gi.overrides import Gdk
+from gi.repository import Gdk
 from gi.overrides.Gtk import Gtk
-from crucipixel import core
+
+from crucipixel.interface import global_constants
 from crucipixel.interface.main_menu import MainMenu
+from crucipixel.interface.puzzle_stage.complete import MainArea
+from crucipixel.logic import core, json_parser
+from lightwidgets.debug import WidgetDebug
 from lightwidgets.stock_widgets.root import MainWindow, Root
+from lightwidgets.support import gtk_to_rgb
+
 
 #DRAFT-2015
 
@@ -40,6 +42,14 @@ if __name__ == '__main__':
     main_area.translate(.5,.5)
     with open("test.tmp","r") as f:
         cruci = core.Crucipixel.guides_from_file(f)
+        print(cruci.row_guides)
+    # cruci_scheme = json_parser.parse_file_name("../data/monopattino.json")
+    # cruci = core.Crucipixel(
+    #     len(cruci_scheme.rows),
+    #     len(cruci_scheme.cols),
+    #     cruci_scheme.rows,
+    #     cruci_scheme.cols
+    # )
     main_area.start_crucipixel(cruci)
     main_area.start_selector()
     root.register_switch_to("new_scheme", main_area)

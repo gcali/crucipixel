@@ -4,13 +4,15 @@ Created on May 19, 2015
 @author: giovanni
 '''
 
-from lightwidgets.geometry import Point, Rectangle
-from crucipixel.interface import global_constants
-from lightwidgets.support import DefaultDict, clamp, get_from_to_inclusive
-from crucipixel import core
 import cairo
+
+from crucipixel.interface import global_constants
+from crucipixel.logic import core
 from lightwidgets.events import MouseEvent
+from lightwidgets.geometry import Point, Rectangle
 from lightwidgets.stock_widgets.widget import Widget
+from lightwidgets.support import DefaultDict, clamp, get_from_to_inclusive
+
 
 class CrucipixelGrid(Widget):
     
