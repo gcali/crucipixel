@@ -129,6 +129,7 @@ class Crucipixel:
     
     def update(self, cell_to_update: Tuple[int, int, int]):
         for (row, col, status) in cell_to_update:
+            print("Update!", row, col, status)
             self[row, col] = status
         results_rows = []
         results_cols = []

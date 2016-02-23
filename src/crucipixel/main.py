@@ -4,13 +4,14 @@ Created on Feb 22, 2015
 @author: giovanni
 '''
 
-from gi.repository import Gdk
 from gi.overrides.Gtk import Gtk
+from gi.repository import Gdk
 
+from crucipixel.data import json_parser
 from crucipixel.interface import global_constants
 from crucipixel.interface.main_menu import MainMenu
 from crucipixel.interface.puzzle_stage.complete import MainArea
-from crucipixel.logic import core, json_parser
+from crucipixel.logic import core
 from lightwidgets.debug import WidgetDebug
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.support import gtk_to_rgb
@@ -40,10 +41,10 @@ if __name__ == '__main__':
     debug.translate(200,10)
     main_area.add(debug,top=-1)
     main_area.translate(.5,.5)
-    with open("test.tmp","r") as f:
-        cruci = core.Crucipixel.guides_from_file(f)
-        print(cruci.row_guides)
-    cruci_scheme = json_parser.parse_file_name("../data/monopattino.json")
+    # with open("test.tmp","r") as f:
+    #     cruci = core.Crucipixel.guides_from_file(f)
+    #     print(cruci.row_guides)
+    cruci_scheme = json_parser.parse_file_name("../data/uccellino.json")
     cruci = core.Crucipixel(
         len(cruci_scheme.rows),
         len(cruci_scheme.cols),
@@ -53,7 +54,6 @@ if __name__ == '__main__':
     main_area.start_crucipixel(cruci)
     main_area.start_selector()
     root.register_switch_to("new_scheme", main_area)
-#     root.set_child(main_area)
 
     print(gtk_to_rgb(global_constants._start_default))
     entries=["New Game",

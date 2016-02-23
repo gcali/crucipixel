@@ -68,44 +68,50 @@ class Root(Gtk.DrawingArea):
         self.child = child
     
     def on_draw(self, widget:"Widget", context:"cairo.Context"):
-        context.save()
-        context.transform(self._child.fromWidgetCoords)
-        if self._child.is_clip_set():
-            rectangle = self._child.clip_rectangle
-            context.rectangle(rectangle.start.x,rectangle.start.y,
-                              rectangle.width,rectangle.height)
-            context.clip()
-        self._child.on_draw(self,context)
-        context.restore()
+        if self._child is not None:
+            context.save()
+            context.transform(self._child.fromWidgetCoords)
+            if self._child.is_clip_set():
+                rectangle = self._child.clip_rectangle
+                context.rectangle(rectangle.start.x,rectangle.start.y,
+                                  rectangle.width,rectangle.height)
+                context.clip()
+            self._child.on_draw(self,context)
+            context.restore()
     
     def _transform_mouse_event(self,event_type,e):
         return _transform_mouse_event(event_type,e,self._child)
     
     def on_mouse_down(self,w:"Gtk.Widget",e:"Gdk.EventButton"):
         self.grab_focus()
-        if e.type == Gdk.EventType.BUTTON_PRESS:
-            self._child.on_mouse_down(self,self._transform_mouse_event("mouse_down",e))
+        if self._child is not None:
+            if e.type == Gdk.EventType.BUTTON_PRESS:
+                self._child.on_mouse_down(self,self._transform_mouse_event("mouse_down",e))
         return True
     
     def on_mouse_up(self,w:"Gtk.Widget",e:"Gdk.EventButton"):
-        self._child.on_mouse_up(self,self._transform_mouse_event("mouse_up", e))
+        if self._child is not None:
+            self._child.on_mouse_up(self,self._transform_mouse_event("mouse_up", e))
         return True
 
     def on_mouse_move(self,w:"Gtk.Widget",e:"Gdk.EventMotion"):
-        self._child.on_mouse_move(self,self._transform_mouse_event("mouse_move",e))
+        if self._child is not None:
+            self._child.on_mouse_move(self,self._transform_mouse_event("mouse_move",e))
         return True
     
     def on_key_down(self,w:"Gtk.Widget",e:"Gdk.EventKey"):
-        self._child.on_key_down(self,_transform_keyboard_event("key_down",e))
+        if self._child is not None:
+            self._child.on_key_down(self,_transform_keyboard_event("key_down",e))
         return True
 
     def on_key_up(self,w:"Gtk.Widget",e:"Gdk.EventKey"):
-        self._child.on_key_up(self,_transform_keyboard_event("key_up",e))
+        if self._child is not None:
+            self._child.on_key_up(self,_transform_keyboard_event("key_up",e))
         return True
     
     def on_new_configuration(self,widget:"Gtk.Widget",event:"Gdk.EventConfigure"):
         new_size = (event.width, event.height)
-        if not self._child is None and self.current_size != new_size:
+        if self._child is not None and self.current_size != new_size:
             self.current_size = new_size
             self._child.on_resize(new_size)
     
@@ -113,7 +119,6 @@ class Root(Gtk.DrawingArea):
         self.queue_draw()
     
     def register_signal_for_child(self,signal_name,widget):
-#         print("I've been called!")
         try:
             self._lw_signals[signal_name].append(widget)
 #             print("I existed!")
@@ -122,13 +127,16 @@ class Root(Gtk.DrawingArea):
             return self.register_signal_for_child(signal_name, widget)
 
     def broadcast_lw_signal(self,signal_name,*args): 
-#         print(self._lw_signals)
-        for w in self._lw_signals[signal_name]:
-            w.handle_signal(signal_name,*args)
+        try:
+            for w in self._lw_signals[signal_name]:
+                w.handle_signal(signal_name,*args)
+        except KeyError as e:
+            print("Signal not found: {}".format(signal_name))
     
     def register_switch_to(self, signal_name:"str", widget:"Widget"):
         return self._switcher.register_switch_to(signal_name, widget)
-    
+
+
 class _RootChildSwitcher(Widget):
     
     def __init__(self, *args, **kwargs):

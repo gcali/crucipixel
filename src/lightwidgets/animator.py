@@ -3,7 +3,7 @@ Created on Mar 23, 2015
 
 @author: giovanni
 '''
-from threading import Lock, Condition, Thread
+from threading import RLock, Condition, Thread
 import time
 from lightwidgets.geometry import Point
 from lightwidgets.physics import get_speed_from_uniform_acceleration,\
@@ -14,7 +14,7 @@ class Animator:
     def __init__(self,interval=.01,widget=None):
         self.interval = interval
         self._animations = []
-        self._lock = Lock()
+        self._lock = RLock()
         self._task_arrived = Condition(self._lock)
         if widget:
             self._widgets = [widget]

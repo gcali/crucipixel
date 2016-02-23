@@ -24,12 +24,12 @@ def gdk_color(*args):
 class CompleteCrucipixel(UncheckedContainer): 
 
     def _init_guides(self, crucipixel):
-        self.horizontal_guide = Guides(start=Point(0, 0), elements=crucipixel.row_guides, 
+        self.horizontal_guide = Guides(start=Point(0, 0), elements=crucipixel.col_guides,
             size=self.cell_size, 
             orientation=Guides.HORIZONTAL)
         self.horizontal_guide.ID = "Horizontal Guide"
         self.vertical_guide = Guides(start=Point(0, 0), 
-            elements=crucipixel.col_guides, 
+            elements=crucipixel.row_guides,
             size=self.cell_size, 
             orientation=Guides.VERTICAL)
         self.vertical_guide.ID = "Vertical Guide"
@@ -42,13 +42,12 @@ class CompleteCrucipixel(UncheckedContainer):
                  cell_size=15, 
                  *args, **kwargs):
         super().__init__(*args,**kwargs)
+        print("Starting at", start)
         self.translate(start.x,start.y)
         self.cell_size = cell_size
         self.rows = crucipixel.rows
         self.cols = crucipixel.cols
-        self.grid = CrucipixelGrid.from_crucipixel(crucipixel=crucipixel, 
-                                                   start=Point(0,0),
-                                                   cell_size=cell_size)
+        self.grid = CrucipixelGrid(crucipixel, Point(0,0), cell_size, cell_size)
         self.grid.selection_style = CrucipixelGrid.SELECTION_RECTANGLE
         self.add(self.grid)
 
@@ -198,7 +197,6 @@ class MainArea(UncheckedContainer):
     def on_mouse_up(self,w,e):
         if self._mouse_down:
             self._mouse_down = False
-        super().on_mouse_up(w,e) 
+        super().on_mouse_up(w,e)
 
-if __name__ == '__main__':
-    pass
+

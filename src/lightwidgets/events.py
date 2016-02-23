@@ -3,7 +3,7 @@ Created on May 20, 2015
 
 @author: giovanni
 '''
-from gi.overrides.Gdk import Gdk
+from gi.repository import Gdk
 
 def _transform_mouse_event(event_type,e,w):
     x,y=w.toWidgetCoords.transform_point(e.x,e.y)
@@ -57,7 +57,9 @@ def _transform_keyboard_event(event_type,e):
                   Gdk.KEY_Up : "up",
                   Gdk.KEY_Left : "left",
                   Gdk.KEY_Right : "right",
-                  Gdk.KEY_space : "space"}
+                  Gdk.KEY_space : "space",
+                  Gdk.KEY_BackSpace : "backspace"
+                }
     if e.keyval in control_keys:
         key = control_keys[e.keyval]
     else:
