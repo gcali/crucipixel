@@ -61,6 +61,13 @@ class Widget:
         elif self._mouse_is_in and not value:
             self._mouse_is_in= False
             self.on_mouse_exit()
+
+    @property
+    def mouse_is_down(self) -> bool:
+        if self.father is None:
+            return False
+        else:
+            return self.father.mouse_is_down
             
 
     @property
@@ -87,7 +94,9 @@ class Widget:
     def container_size(self):
         if self.father is None:
             raise AttributeError
-        return self.father.container_size
+        size = self.father.container_size
+        return size
+
     
     
     @property
@@ -152,7 +161,7 @@ class Widget:
     def get_vertexes_father_coordinates(self):
         return map(self.fromWidgetCoords.transform_point,self.get_vertexes())
 
-    def on_draw(self,w,c):
+    def on_draw(self, w: "Widget", c):
         pass
     
     def on_mouse_exit(self):
@@ -180,7 +189,7 @@ class Widget:
     def on_resize(self,new_father_dim):
         return
     
-    def is_point_in(self,p:"Point",category=MouseEvent.UNKNOWN):
+    def is_point_in(self,p: Point ,category=MouseEvent.UNKNOWN):
         if category == MouseEvent.MOUSE_UP:
             return True
         elif not self.is_clip_set():

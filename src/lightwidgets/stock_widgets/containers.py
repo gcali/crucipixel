@@ -65,7 +65,8 @@ class Container(Widget):
                         return True
                 else:
                     child.mouse_is_in = False
-            except TypeError:
+            except TypeError as e:
+                print("Type error?", e)
                 return True
         return False
     

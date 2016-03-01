@@ -511,6 +511,7 @@ class CrucipixelGrid(Widget):
         return False
     
     def is_point_in(self, p: Point, category=MouseEvent.UNKNOWN):
+        print("Asking if I was in", category)
         if category == MouseEvent.MOUSE_MOVE and self.is_mouse_selection_on:
             return True
         else:

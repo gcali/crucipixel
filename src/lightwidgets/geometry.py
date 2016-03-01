@@ -135,3 +135,32 @@ class RoundedRectangle:
                 Point(self.start.x,self.start.y + self.height),
                 Point(self.start.x + self.width,self.start.y + self.height)
                 ]
+
+def is_point_inside_triangle(p: Point, a: Point, b: Point, c: Point) -> bool:
+    x = p.x
+    y = p.y
+
+    x_1 = a.x
+    x_2 = b.x
+    x_3 = c.x
+
+    y_1 = a.y
+    y_2 = b.y
+    y_3 = c.y
+
+    alpha = ((y_2 - y_3) * (x - x_3) + (x_3 - x_2) * (y - y_3)) /\
+            ((y_2 - y_3) * (x_1 - x_3) + (x_3 - x_2) * (y_1 - y_3))
+    beta = ((y_3 - y_1) * (x - x_3) + (x_1 - x_3) * (y - y_3)) /\
+           ((y_2 - y_3) * (x_1 - x_3) + (x_3 - x_2) * (y_1 - y_3))
+
+    if alpha < 0 or alpha > 1 or beta < 0 or beta > 1:
+        return False
+    gamma = 1 - alpha - beta
+    if gamma < 0 or gamma > 1:
+        return False
+
+    return True
+
+
+if __name__ == '__main__':
+    main()

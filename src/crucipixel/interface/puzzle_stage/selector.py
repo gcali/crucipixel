@@ -85,8 +85,11 @@ class Selector(Widget):
             return False
     
     def is_point_in(self, p:"Point",category=MouseEvent.UNKNOWN):
-        return p.x >= 0 and p.x <= self.total_width and\
-               p.y >= 0 and p.y <= self.total_height
+        try:
+            return p.x >= 0 and p.x <= self.total_width and\
+                   p.y >= 0 and p.y <= self.total_height
+        except AttributeError:
+            return False
 
     def on_draw(self,widget,context):
         context.save()

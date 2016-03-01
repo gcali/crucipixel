@@ -111,10 +111,11 @@ class Guides(Widget):
     def _update_clip(self):
         if self.orientation == Guides.HORIZONTAL:
             self.height = self.line_length
-            self.clip_rectangle = Rectangle(Point(0,-.5), self.cell_size * len(self.elements) + 2, -self.height)
+            # self.clip_rectangle = Rectangle(Point(0,-.5), self.cell_size * len(self.elements) + 2, -self.height)
         else:
             self.width = self.line_length
-            self.clip_rectangle = Rectangle(Point(-.5,0),-self.width,self.cell_size * len(self.elements) + 2)
+            # self.clip_rectangle = Rectangle(Point(-.5,0),-self.width,self.cell_size * len(self.elements) + 2)
+        self.clip_rectangle = None
 
         
     def _update_cell_list(self):
@@ -220,8 +221,6 @@ class Guides(Widget):
             else:
                 context.set_line_width(1)
             draw_line(line)
-        context.set_line_width(2)
-        draw_line(self._line_coordinates(i+1))
 
         context.set_line_width(1)
         context.set_font_size(self.font_size)

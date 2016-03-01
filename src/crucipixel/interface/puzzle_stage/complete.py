@@ -3,9 +3,13 @@ Created on May 19, 2015
 
 @author: giovanni
 '''
-
+from crucipixel.data.json_parser import parse_file_name
+from crucipixel.interface.puzzle_stage.navigator import Navigator
+from crucipixel.logic import core
 from lightwidgets.geometry import Point
 from gi.repository import Gdk
+
+from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.support import Bunch
 from lightwidgets.animator import AccMovement
 from crucipixel.interface import global_constants
@@ -21,16 +25,16 @@ def gdk_color(*args):
         r,g,b = args
     return Gdk.Color.from_floats(r, g, b) 
 
-class CompleteCrucipixel(UncheckedContainer): 
+class CompleteCrucipixel(UncheckedContainer):
 
     def _init_guides(self, crucipixel):
         self.horizontal_guide = Guides(start=Point(0, 0), elements=crucipixel.col_guides,
-            size=self.cell_size, 
+            size=self.cell_size,
             orientation=Guides.HORIZONTAL)
         self.horizontal_guide.ID = "Horizontal Guide"
-        self.vertical_guide = Guides(start=Point(0, 0), 
+        self.vertical_guide = Guides(start=Point(0, 0),
             elements=crucipixel.row_guides,
-            size=self.cell_size, 
+            size=self.cell_size,
             orientation=Guides.VERTICAL)
         self.vertical_guide.ID = "Vertical Guide"
         self.add(self.horizontal_guide)
@@ -39,7 +43,7 @@ class CompleteCrucipixel(UncheckedContainer):
     def __init__(self,
                  crucipixel,
                  start=Point(0,0),
-                 cell_size=15, 
+                 cell_size=15,
                  *args, **kwargs):
         super().__init__(*args,**kwargs)
         print("Starting at", start)
@@ -59,7 +63,7 @@ class CompleteCrucipixel(UncheckedContainer):
     def _update_scale(self):
         self.scale(self._current_scale.x,self._current_scale.y)
         self.invalidate()
-    
+
     def on_key_down(self, w, e):
         if e.key == "=" or e.key == "+":
             self.zoom_in()
@@ -71,7 +75,7 @@ class CompleteCrucipixel(UncheckedContainer):
             self._handle_movement(self._movement[e.key])
         else:
             super().on_key_down(w,e)
-    
+
     def on_key_up(self, w, e):
         if e.key in self._movement and "shift" in e.modifiers:
             self._stop_movement(self._movement[e.key])
@@ -84,11 +88,11 @@ class CompleteCrucipixel(UncheckedContainer):
     def zoom_in(self):
         self.scale(1.5,1.5)
         self.invalidate()
-    
+
     def zoom_out(self):
         self.scale((1/1.5),(1/1.5))
         self.invalidate()
-    
+
     def _handle_movement(self,direction:"str"):
         def get_direction(direction):
             if direction == "left":
@@ -118,15 +122,15 @@ class CompleteCrucipixel(UncheckedContainer):
                               int(store_pos.v.y))
                 store_pos.v -= delta
                 self.translate(delta.x, delta.y)
-            animation = AccMovement(assign=assign, 
-                                    acc=acc, 
-                                    start_position=Point(0,0), 
-                                    duration=0, 
+            animation = AccMovement(assign=assign,
+                                    acc=acc,
+                                    start_position=Point(0,0),
+                                    duration=0,
                                     start_speed=start_speed)
             animation.widget = self
             self._direction_animations[direction] = animation
             global_constants.global_animator.add_animation(animation)
-    
+
     def _stop_movement(self,direction:"str"):
         try:
             self._direction_animations[direction].stop = True
@@ -137,24 +141,24 @@ class CompleteCrucipixel(UncheckedContainer):
     def move(self,offset_x=0,offset_y=0):
         self.translate(offset_x,offset_y)
         self.invalidate()
-    
+
     def move_down(self,offset=10):
         return self.move(offset_y=offset)
-    
+
     def move_up(self,offset=10):
         return self.move(offset_y=-offset)
-    
+
     def move_left(self,offset=10):
         return self.move(offset_x=-offset)
 
     def move_right(self,offset=10):
         return self.move(offset_x=offset)
-    
-    def on_mouse_enter(self):
-        super().on_mouse_enter()
-        
-    def on_mouse_exit(self):
-        return super().on_mouse_exit()
+
+    # def on_mouse_enter(self):
+    #     super().on_mouse_enter()
+    #
+    # def on_mouse_exit(self):
+    #     return super().on_mouse_exit()
         
 class MainArea(UncheckedContainer):
     
@@ -166,6 +170,13 @@ class MainArea(UncheckedContainer):
         self._mouse_down = False
         self._click_point = Point(0,0)
         self.counter=0
+        self.navigator = None
+
+    def start_navigator(self):
+        self.navigator = Navigator()
+        self.navigator.scale(.7,.7)
+        self.navigator.ID = "Navigator"
+        self.add(self.navigator, top=-1)
     
     def start_selector(self,start=Point(0,0)):
         self.selector = Selector(start=start)
@@ -200,3 +211,24 @@ class MainArea(UncheckedContainer):
         super().on_mouse_up(w,e)
 
 
+def main() -> int:
+    cruci_scheme = parse_file_name("../data/monopattino.json")
+    cruci_core = core.Crucipixel(
+        len(cruci_scheme.rows),
+        len(cruci_scheme.cols),
+        cruci_scheme.rows,
+        cruci_scheme.cols
+    )
+    complete = MainArea()
+    complete.start_crucipixel(cruci_core)
+    complete.start_selector()
+    complete.start_navigator()
+
+    main_area = MainWindow(title="Complete")
+    root = Root()
+    root.set_child(complete)
+    main_area.add(root)
+    main_area.start_main()
+
+if __name__ == '__main__':
+    main()

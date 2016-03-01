@@ -36,6 +36,7 @@ class Root(Gtk.DrawingArea):
         self._switcher.father = self
         self._lw_signals = {}
         self._main_window = None
+        self.mouse_is_down = False
         
     @property
     def child(self):
@@ -46,7 +47,7 @@ class Root(Gtk.DrawingArea):
         self._child = value
         value.father = self
         if hasattr(value,"min_size"):
-            size_x,size_y =  value.min_size
+            size_x,size_y = value.min_size
             self.set_min_size(size_x, size_y)
         
     @property
@@ -83,6 +84,7 @@ class Root(Gtk.DrawingArea):
         return _transform_mouse_event(event_type,e,self._child)
     
     def on_mouse_down(self,w:"Gtk.Widget",e:"Gdk.EventButton"):
+        self.mouse_is_down = True
         self.grab_focus()
         if self._child is not None:
             if e.type == Gdk.EventType.BUTTON_PRESS:
@@ -90,6 +92,7 @@ class Root(Gtk.DrawingArea):
         return True
     
     def on_mouse_up(self,w:"Gtk.Widget",e:"Gdk.EventButton"):
+        self.mouse_is_down = False
         if self._child is not None:
             self._child.on_mouse_up(self,self._transform_mouse_event("mouse_up", e))
         return True
@@ -114,6 +117,7 @@ class Root(Gtk.DrawingArea):
         if self._child is not None and self.current_size != new_size:
             self.current_size = new_size
             self._child.on_resize(new_size)
+        self.invalidate()
     
     def invalidate(self):
         self.queue_draw()
@@ -145,7 +149,8 @@ class _RootChildSwitcher(Widget):
     def register_switch_to(self, signal_name:"str", widget:"Widget"):
         def switch():
             self.father.child = widget
-            self.father.invalidate()
+            print("What's the container size?", widget.container_size)
+            widget.invalidate()
             print("I'm switching!")
         self.register_signal(signal_name, switch)
 

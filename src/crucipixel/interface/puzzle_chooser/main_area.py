@@ -4,14 +4,16 @@ Created on May 19, 2015
 @author: giovanni
 '''
 
-from general import lightwidgets as lw
-from general.lightwidgets import Button
+from lightwidgets.stock_widgets.buttons import Button
 from crucipixel.interface import global_constants
 from gi.overrides.Gtk import Gtk
 from gi.overrides import Gdk
-from general.geometry import Point
+from lightwidgets.geometry import Point
+from lightwidgets.stock_widgets.containers import UncheckedContainer
+from lightwidgets.stock_widgets.root import MainWindow, Root
 
-class MainArea(lw.UncheckedContainer):
+
+class MainArea(UncheckedContainer):
 
     def __init__(self, puzzle_list:"[(name,dim,path)]",*args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,9 +40,9 @@ class MainArea(lw.UncheckedContainer):
             
 
 if __name__ == '__main__':
-    win = lw.MainWindow(title="PuzzleChooser Dev")
+    win = MainWindow(title="PuzzleChooser Dev")
     win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.9,.9,.9,1))
-    root = lw.Root()
+    root = Root()
 
     main_area = MainArea(puzzle_list=[("Forbici", Point(20,20), "tmp.data")],min_size=(100,100))
     main_area.translate(.5,.5)

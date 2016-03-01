@@ -3,28 +3,30 @@ Created on May 20, 2015
 
 @author: giovanni
 '''
+from typing import List
+
 from lightwidgets.stock_widgets.widget import Widget
 from crucipixel.interface.global_constants import char_size
 
 class Table(Widget):
     
-    def __init__(self, cols, entries:"tuple(cols) list"=[], **kwargs):
+    def __init__(self, entries: List[List[str]]=[], **kwargs):
         super().__init__(**kwargs)
         
-        self._entries = list(entries)
+        self._entries = entries
         self.font_size = 20
-        self.cols = cols
+        self.cols = 0 if len(entries) == 0 else len(entries[0])
     
     def add_entry(self, entry):
         self._entries.append(entry)
     
     @property
     def entries(self):
-        return list(self._entries)
+        return self._entries
     
     @entries.setter
     def entries(self, value):
-        self._entries = list(value)
+        self._entries = value
     
     @property
     def cell_height(self):
@@ -36,7 +38,6 @@ class Table(Widget):
         char_width = char_size(self.font_size).x
         comparison_list = zip(*self._entries)
         return [max([char_width * (len(e) + 2) for e in column]) for column in comparison_list]
-        
         
     def on_draw(self, w, c):
         super().on_draw(w,c)

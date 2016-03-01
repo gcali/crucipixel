@@ -53,6 +53,7 @@ if __name__ == '__main__':
     )
     main_area.start_crucipixel(cruci)
     main_area.start_selector()
+    main_area.start_navigator()
     root.register_switch_to("new_scheme", main_area)
 
     print(gtk_to_rgb(global_constants._start_default))
