@@ -161,7 +161,7 @@ class Widget:
     def get_vertexes_father_coordinates(self):
         return map(self.fromWidgetCoords.transform_point,self.get_vertexes())
 
-    def on_draw(self, w: "Widget", c):
+    def on_draw(self, widget: "Widget", context: cairo.Context):
         pass
     
     def on_mouse_exit(self):

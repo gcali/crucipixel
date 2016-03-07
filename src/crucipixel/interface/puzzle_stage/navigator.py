@@ -47,9 +47,17 @@ class Navigator(UncheckedContainer):
             self._should_pass_move = True
         return super().on_mouse_enter()
 
+    def on_mouse_exit(self) -> bool:
+        self._should_pass_move = False
+        return super().on_mouse_exit()
+
     def on_mouse_move(self, w, e):
         super().on_mouse_move(w, e)
         return not self._should_pass_move
+
+    def on_mouse_down(self, w, e):
+        super().on_mouse_down(w, e)
+        return True
 
     @property
     def fromWidgetCoords(self):

@@ -7,6 +7,9 @@ from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.geometry import Point, Rectangle
 from lightwidgets.events import MouseEvent
 
+def _transform_point(widget: Widget, point: Point):
+    return Point(widget.toWidgetCoords.transform_point(point.x, point.y))
+
 class Container(Widget):
     
     def __init__(self,*args,**kwargs):
@@ -51,10 +54,12 @@ class Container(Widget):
             self.sizes[widget]
         except KeyError:
             raise AttributeError()
-    
+
+
     def _handle_mouse_event(self,widget,event,callback,category):
         for child in reversed(list(self.list)):
-            p = Point(child.toWidgetCoords.transform_point(event.x,event.y))
+            # p = Point(child.toWidgetCoords.transform_point(event.x,event.y))
+            p = _transform_point(child, event)
             try:
                 if child.is_point_in(p,category):
                     child.mouse_is_in = True
@@ -113,7 +118,7 @@ class Container(Widget):
     
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
         for child in self.list:
-            if child.is_point_in(p,category):
+            if child.is_point_in(_transform_point(child, p),category):
                 return True
         return False
     

@@ -26,6 +26,8 @@ class Arrow(Widget):
         self.direction = direction
         self.colour = colour
 
+        self.action = lambda: None
+
     @property
     def _vertexes(self) -> Tuple[Point, Point, Point]:
         w = self.base_size
@@ -33,9 +35,13 @@ class Arrow(Widget):
 
         return Point(-w/2, h/2), Point(0, -h/2), Point(w/2, h/2)
 
+    def on_mouse_up(self,w,e):
+        super().on_mouse_up(w, e)
+        self.action()
+        return False
+
     def on_mouse_down(self,w,e):
         super().on_mouse_down(w, e)
-        print("I'm a mouse down!", self.is_point_in(e))
         return True
 
     def on_draw(self, widget: Widget, c):
