@@ -161,8 +161,15 @@ class Guides(Widget):
         self._update_clip()
 
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
-        value= super().is_point_in(p,category)
-        return value
+        if self.elements:
+            for line in self.elements:
+                for e in line:
+                    if e.wide_cell.is_point_in(p):
+                        return True
+        return False
+        # value = super().is_point_in(p,category)
+        # print(self.ID, value, p, self.clip_rectangle)
+        # return value
     
     def on_mouse_down(self, w, e):
         p = Point(e.x,e.y)

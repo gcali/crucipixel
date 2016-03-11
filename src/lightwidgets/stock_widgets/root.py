@@ -30,8 +30,8 @@ class Root(Gtk.DrawingArea):
         self.connect("key-press-event", self.on_key_down)
         self.connect("key-release-event", self.on_key_up)
         self.connect("configure-event", self.on_new_configuration)
-        self.set_min_size(width,height)
-        self.current_size = (width,height)
+        self.set_min_size(width, height)
+        self.current_size = width, height
         self._switcher = _RootChildSwitcher()
         self._switcher.father = self
         self._lw_signals = {}
@@ -61,7 +61,7 @@ class Root(Gtk.DrawingArea):
     def set_main_window(self, window):
         window.add(self)
         self._main_window = window
-        
+
     def set_min_size(self, sizeX:"num", sizeY:"num"):
         self.set_size_request(sizeX, sizeY)
     

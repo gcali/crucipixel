@@ -116,7 +116,7 @@ class Container(Widget):
             return widget.handle_signal(signal_name,*args)
         self.register_signal(signal_name, handle_child)
     
-    def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
+    def is_point_in(self, p: "Point", category=MouseEvent.UNKNOWN):
         for child in self.list:
             if child.is_point_in(_transform_point(child, p),category):
                 return True
@@ -143,10 +143,15 @@ class Container(Widget):
                     child_vertexes = [Point(child.fromWidgetCoords.transform_point(p.x,p.y))\
                                         for p in child.clip_rectangle.get_vertexes()]
                     vertexes.extend(child_vertexes)
+                else:
+                    return super().clip_rectangle
             if not vertexes:
                 return super().clip_rectangle
             else:
                 return Rectangle.from_points(vertexes)
+
+    def set_max_size(self, width: int, height: int):
+        self.father.set_max_size(width, height)
 
                         
 

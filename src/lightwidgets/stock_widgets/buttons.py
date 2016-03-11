@@ -3,11 +3,104 @@ Created on May 20, 2015
 
 @author: giovanni
 '''
+from typing import Tuple
+
+import cairo
+
+from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.geometry import Point
 from lightwidgets.stock_widgets.geometrical import DrawableRoundedRectangle
 from lightwidgets.support import rgb_to_gtk
 from lightwidgets.events import MouseEvent
+
+
+class BetterButton(Widget):
+
+    LEFT = 0,
+    RIGHT = 1,
+    CENTER = 2
+
+    def __init__(self, label: str,
+                 font_size: int = 10,
+                 padding: int = 10,
+                 origin: int = CENTER,
+                 background_color: Tuple[int, int, int] = (.588, .588, .588),
+                 label_color: Tuple[int, int, int] = (0, 0, 0),
+                 **kwargs):
+        super().__init__(self, **kwargs)
+        self.label = label
+        self.padding = padding
+        self.origin = origin
+        self.background_color = background_color
+        self.label_color = label_color
+        self.font_size = font_size
+        self.shape = None
+
+        self.on_click_action = None
+
+        self._mouse_up_interested = None
+
+    def is_point_in(self,p: Point ,category=MouseEvent.UNKNOWN):
+        if self.shape is None:
+            return False
+        elif self._mouse_up_interested:
+            return True
+        else:
+            return self.shape.is_point_in(p)
+
+    def on_mouse_down(self, widget: "Widget", event: MouseEvent):
+        self._mouse_up_interested = True
+        return super().on_mouse_down(widget, event)
+
+    def on_mouse_up(self, widget: "Widget", event: MouseEvent):
+        if self.on_click_action is not None:
+            self.on_click_action()
+        return super().on_mouse_up(widget, event)
+
+    def on_draw(self, widget: Widget, context: cairo.Context):
+
+        start_x, start_y = context.get_current_point()
+
+        label = self.label
+        padding = self.padding
+        context.set_font_size(self.font_size)
+        xb, yb, w, h, xa, ya = context.text_extents(label)
+        width = padding * 2 + xa
+        height = padding * 2 + h
+
+        context.set_source_rgb(*self.background_color)
+        if self.origin == self.LEFT:
+            start = Point(0, 0)
+        elif self.origin == self.CENTER:
+            start = Point(-width/2, 0)
+        else:
+            start = Point(-width, 0)
+        shape = DrawableRoundedRectangle(start, width, height)
+        shape.draw_on_context(context)
+        context.fill()
+
+        context.move_to(start_x + start.x + padding,
+                        start_y + start.y + padding + h)
+        context.set_source_rgb(*self.label_color)
+        context.show_text(label)
+
+        self.shape = shape
+
+
+def main():
+    main_window = MainWindow(title="button")
+    root = Root(100, 100)
+    root.set_main_window(main_window)
+    button = BetterButton("ciao", 20)
+    button.translate(50, 50)
+    button.on_click_action = lambda: print("Hi!")
+    root.set_child(button)
+
+    main_window.start_main()
+
+
+
 
 class Button(Widget):
     
@@ -91,4 +184,8 @@ class Button(Widget):
     def is_point_in(self, p:"Point", category=MouseEvent.UNKNOWN):
         if category == MouseEvent.MOUSE_UP and self._button_mouse_was_down:
             return True
-        return self._shape.is_point_in(p) 
+        return self._shape.is_point_in(p)
+
+if __name__ == '__main__':
+    main()
+

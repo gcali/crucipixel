@@ -3,18 +3,24 @@ Created on May 20, 2015
 
 @author: giovanni
 '''
-from time import sleep
-from typing import List, Tuple, Iterable
+from typing import List, Tuple, Iterable, Callable
 
 import cairo
 import itertools
 
+
+from crucipixel.data.json_parser import parse_file_name
+from crucipixel.interface import global_constants
 from lightwidgets.events import MouseEvent
 from lightwidgets.geometry import Rectangle, Point
 from lightwidgets.stock_widgets.arrow import Arrow
+from lightwidgets.stock_widgets.buttons import Button, BetterButton
 from lightwidgets.stock_widgets.containers import UncheckedContainer
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.widget import Widget
+
+from gi.overrides.Gtk import Gtk
+from gi.repository import Gdk
 
 class _CellDataSize:
 
@@ -93,27 +99,25 @@ class _LineExtents:
 class _TableExtents:
 
     def __init__(self, title_extents: _LineExtents,
-                 line_extents: List[_LineExtents],
-                 skip: int,
-                 how_many: int):
+                 line_extents: List[_LineExtents]):
         self.title_extents = title_extents
         self.line_extents = line_extents
         self._base_vertical_positions = None
         self.entries_width = 0
-        self.skip = skip
-        self.how_many = how_many
         self._heights = 0
         self._calc_size()
 
-    def get_height(self, skip: int, how_many: int) -> int:
+    def get_height_up_to(self, skip: int, how_many: int) -> int:
         # print("Skip!", skip, how_many, len(self._heights))
-        return sum(self._heights[skip : skip + how_many])
+        return sum(self._heights[skip: skip + how_many])
+
+    def get_height_of(self, skip: int, how_many: int, index: int) -> int:
+        if index >= how_many:
+            raise IndexError(index)
+        return self._heights[skip + index]
 
     def get_vertical_position(self, index: int, skip: int=0):
         return sum(self._heights[skip:skip + index - 1])
-
-    def get_entries_height(self, skip: int, how_many: int) -> int:
-        return sum(self._heights[skip:skip + how_many])
 
     def _calc_size(self):
 
@@ -135,7 +139,7 @@ class _TableExtents:
             h = line.total_height
             heights.append(h)
             for index, cell in enumerate(line):
-                max_width[index] = max(max_width[index], cell.width)
+                max_width[index] = max(max_width[index], cell.total_width)
 
         for i, line in enumerate(line_extents):
             # print("Line", i)
@@ -162,13 +166,11 @@ class _TableExtents:
             else:
                 break
 
-    def __iter__(self) -> Iterable[_LineExtents]:
-        return self.iter_over(self.skip, self.how_many)
+    # def __iter__(self) -> Iterable[_LineExtents]:
+    #     return self.iter_over(self.skip, self.how_many)
 
     def __getitem__(self, item):
-        if item >= self.how_many:
-            raise IndexError(item)
-        return self.line_extents.__getitem__(item + self.skip)
+        return self.line_extents.__getitem__(item)
 
 
 class TableEntry:
@@ -277,17 +279,29 @@ class TableContents(Widget):
     def __init__(self, entries: List[TableEntry]=[], **kwargs):
         super().__init__(**kwargs)
 
+        self.ID = "TableContents"
+
         self._entries = entries
         self._font_size = 20
         self.margin = 4
         self._skip = 0
         self._how_many = len(entries)
+        self._shown = self._how_many
         self._table_extents = None
         self._max_width = None
         self._max_height = None
+        self._to_highlight = None
         self.table_height = 0
         self.table_width = 0
         self.title_height = 0
+        self._selected_callback = lambda x: None
+
+    def set_selected_callback(self, callback: Callable[[int], None]):
+        self._selected_callback = callback
+
+    def on_mouse_up(self,w,e):
+        if self._to_highlight is not None:
+            self._selected_callback(self._to_highlight + self.skip)
 
     @property
     def title(self) -> Iterable[str]:
@@ -297,7 +311,7 @@ class TableContents(Widget):
 
     @property
     def skip(self):
-        return min(self._skip, len(self._entries) - self.how_many)
+        return min(self._skip, len(self._entries) - self._shown)
 
     @skip.setter
     def skip(self, value):
@@ -344,11 +358,15 @@ class TableContents(Widget):
 
         self._reset_calculations()
 
-    def _get_line_extents(self, entry: str, context: cairo.Context) -> _LineExtents:
+    def _get_line_extents(self,
+                          entry: str,
+                          context: cairo.Context,
+                          min_first_width: int=1) -> _LineExtents:
 
         def _get_cell_data_size(data: str) -> _CellDataSize:
             xb, yb, w, h, xa, ya = context.text_extents(data)
             return _CellDataSize(xa, -yb)
+
 
         # entry = self.entries[index]
         extents = _LineExtents(
@@ -358,34 +376,67 @@ class TableContents(Widget):
 
         width = extents.total_width
         # print("Width: {} Max: {}".format(width, self._max_width))
-        if width > self._max_width:
-            left_start = extents.get_cell_data_left(1)
-            if width - left_start + self.margin * 4 >= self._max_width:
-                # print("Way too long???")
-                # sleep(1)
-                # line is way too long
-                extents[0].width = 1
-            else:
-                first_width = self._max_width - width + left_start - self.margin * 4
-                # print("Here's the first!", first_width)
-                # sleep(1)
-                extents[0].width = first_width
+        # if width > self._max_width:
+        left_start = extents.get_cell_data_left(1)
+        first_width = self._max_width - width + left_start - self.margin * 4
+        first_width = max(first_width, min_first_width)
+        if first_width < extents[0].width:
+            extents[0].width = first_width
+        else:
+            extents[0].calculate_padding(first_width)
 
         return extents
 
     def _update_table_extents(self, context: cairo.Context,
                               max_width:int = None):
         # print("Updating!")
+
+        title_extents = self._get_line_extents([e for e in self.title], context)
         self._table_extents = _TableExtents(
-            self._get_line_extents([e for e in self.title], context),
-            [self._get_line_extents(e, context)
-             for e in self.entries],
-            self.skip,
-            self.how_many
+            title_extents,
+            [self._get_line_extents(e, context, title_extents[0].width)
+             for e in self.entries]
         )
 
-    def is_point_in(self,p: Point ,category=MouseEvent.UNKNOWN):
-        return True
+    def _get_line_index_from_point(self, p: Point):
+
+        y = p.y
+        limit = self.margin + self._table_extents.title_extents.total_height
+        if y < limit:
+            return None
+        for i in range(self._shown):
+            limit += self._table_extents.get_height_of(self.skip, self._shown, i)
+            if y < limit:
+                return i
+        else:
+            return None
+
+    def is_point_in(self,p: Point, category=MouseEvent.UNKNOWN):
+        if self._table_extents is None:
+            return False
+        else:
+            y = p.y
+            h = self._table_extents.get_height_up_to(self.skip, self._shown) + \
+                self._table_extents.title_extents.total_height + self.margin
+            if y < 0 or y > h:
+                return False
+            x = p.x
+            w = self._table_extents.entries_width
+            if x < 0 or x > w:
+                return False
+            return True
+
+    def _highlight(self, index: int):
+        self._to_highlight = index
+        self.invalidate()
+
+    def on_mouse_move(self,widget, event):
+        super().on_mouse_move(widget, event)
+        self._highlight(self._get_line_index_from_point(event))
+
+    def on_mouse_exit(self):
+        super().on_mouse_exit()
+        self._highlight(None)
 
     def on_draw(self, widget: Widget, context: cairo.Context):
         super().on_draw(widget, context)
@@ -396,19 +447,48 @@ class TableContents(Widget):
         if self._table_extents is None:
             self._update_table_extents(context)
 
-        entries = self.entries[self.skip:self.skip + self.how_many]
-        table_extents = self._table_extents
-
+        skip = max(self.skip, 0)
         how_many = self.how_many
-        table_extents_iterator = lambda: table_extents.iter_over(
-            self.skip, how_many
-        )
+
+        table_extents = self._table_extents
+        title_extents = self._table_extents.title_extents
+
+        expected_height = title_extents.total_height + self.margin
+
+        print("Base height:", expected_height, "Max height:", self._max_height)
+
+        entries = self.entries
+
+        base = skip
+        up_to = skip
+        over = False
+        while up_to < len(entries) and not over:
+            expected_height += table_extents[up_to].total_height
+            over = expected_height >= self._max_height
+            if not over:
+                up_to += 1
+
+        while base > 0 and not over:
+            expected_height += table_extents[base-1].total_height
+            over = expected_height >= self._max_height
+            if not over:
+                base -= 1
+
+        how_many = up_to - base
+        skip = base
+
+        entries = self.entries[skip:skip + how_many]
+
+        print("Base:", base, "Up to:", up_to)
+
+        def table_extents_iterator():
+            return table_extents.iter_over(
+                skip, how_many
+            )
 
         start_x, start_y = context.get_current_point()
 
-        start_y += self.margin
-
-        title_extents = self._table_extents.title_extents
+        start_y += title_extents.total_height
         h = title_extents.total_height
         self.title_height = h
         for (index, cell), data in zip(enumerate(title_extents), self.title):
@@ -422,21 +502,24 @@ class TableContents(Widget):
             )
             context.show_text(data)
             context.restore()
-        start_y += self.margin
+        # start_y += self.margin
 
-        curr_x, curr_y = start_x, start_y - self.margin
+        curr_x, curr_y = start_x, start_y# + title_extents.total_height
 
-        for index, (line_extent, entry) in enumerate(zip(table_extents_iterator(), entries)):
+        for line_index, (line_extent, entry) in enumerate(zip(table_extents_iterator(), entries)):
             # print("Handling", entry[0])
             h = line_extent.total_height
             curr_y += h
-            if curr_y - self.margin > self._max_height:
-                how_many = index
+            # how_many = line_index
+            # print("Line index:", how_many)
+            if curr_y + self.margin >= self._max_height:
+                # print("I'm breaking at", how_many)
+                # print("Max height:", self._max_height)
                 break
-            for (index, cell), data in zip(enumerate(line_extent), entry):
+            for (cell_index, cell), data in zip(enumerate(line_extent), entry):
                 # print("->", data, cell)
                 context.save()
-                offset = line_extent.get_cell_data_left(index)
+                offset = line_extent.get_cell_data_left(cell_index)
                 context.rectangle(curr_x + offset, curr_y - h, cell.width, 2*h)
                 context.clip()
                 context.move_to(
@@ -445,11 +528,15 @@ class TableContents(Widget):
                 )
                 context.show_text(data)
                 context.restore()
+        # else:
+        #     how_many += 1
+        # print("How many?", how_many)
 
         curr_x = start_x
         end_x = table_extents.entries_width
-        curr_y = start_y
-        end_y = table_extents.get_height(self.skip, how_many) + self.margin * 2
+        curr_y = start_y + self.margin
+        end_y = table_extents.get_height_up_to(skip, how_many) + start_y + self.margin + 1
+        print("End y:", end_y, "How many:", how_many)
 
         self.table_height = end_y
         self.table_width = end_x
@@ -464,7 +551,7 @@ class TableContents(Widget):
         context.stroke()
 
         curr_x = start_x
-        curr_y = start_y - 1
+        curr_y = start_y - 1 + self.margin
         line = table_extents[0]
         for cell in line:
             context.move_to(curr_x, curr_y)
@@ -475,7 +562,20 @@ class TableContents(Widget):
         context.line_to(curr_x, end_y)
         context.stroke()
 
+        if self._to_highlight is not None:
+            r, g, b = global_constants._highlight
+            context.set_source_rgba(r, g, b, .6)
+            index = self._to_highlight
+            base = start_y + table_extents.get_height_up_to(skip, index) + self.margin
+            h = table_extents.get_height_of(skip, how_many, index)
+            context.rectangle(start_x, base, table_extents.entries_width, h)
+            context.fill()
+
+
         context.restore()
+
+        self._shown = how_many
+        print("Setting show at ", self._shown)
 
 
 class Table(UncheckedContainer):
@@ -485,18 +585,28 @@ class Table(UncheckedContainer):
         self.contents = TableContents(entries)
         self.contents.set_max_size(400, 70)
         self.navigator = TableNavigator()
-
-        self._right_margin = 0
+        self.navigator.up_pos += 15
+        self.back_button = BetterButton("Back", origin = BetterButton.RIGHT)
+        self.back_button.font_size = 20
 
         self.add(self.contents)
         self.add(self.navigator)
+        self.add(self.back_button)
         def adjust_skip(value):
+            print("Old:", self.skip)
             skip = self.skip
             self.skip = skip + value
+            print("New:", self.skip)
             self.invalidate()
 
         self.navigator.on_up_arrow_action = lambda: adjust_skip(-1)
         self.navigator.on_down_arrow_action = lambda: adjust_skip(1)
+
+    def set_contents_callback(self, callback: Callable[[int], None]) -> None:
+        self.contents.set_selected_callback(callback)
+
+    def set_back_callback(self, callback: Callable[[], None]) -> None:
+        self.back_button.on_click_action = callback
 
     @property
     def font_size(self):
@@ -512,7 +622,7 @@ class Table(UncheckedContainer):
 
     @skip.setter
     def skip(self, value):
-        # print("New value!", value)
+        print("New value!", value)
         self.contents.skip = value
 
     @property
@@ -524,54 +634,80 @@ class Table(UncheckedContainer):
         self.contents.how_many = value
 
     def on_draw(self, widget: "Widget", context: cairo.Context):
-        right_margin = 4 + self.navigator.width + 6
+        translation = 10, 10
+        context.translate(*translation)
+        self.contents.set_translate(*translation)
+        self.navigator.set_translate(*translation)
+        self.back_button.set_translate(*translation)
+        up_margin = 4
+        down_margin = 6
+        left_margin = 4
+        right_margin = self.navigator.width
+        navigator_margin = 4
         base_x, base_y = self.fromWidgetCoords.transform_point(0, 0)
-        width = self.container_size[0] - 2 * base_x - right_margin
-        height = self.container_size[1] - 2 * base_y
+        base_x += translation[0]
+        base_y += translation[1]
+        width = self.container_size[0] - 2 * base_x - right_margin - 2 * navigator_margin
+        height = self.container_size[1] - 2 * base_y - down_margin
         self.contents.set_max_size(width, height)
         self.contents.on_draw(widget, context)
-        offset = self.contents.table_width + 4
-        self.navigator.set_translate(offset, 0)
+        offset = self.contents.table_width + navigator_margin
+        self.navigator.translate(offset, 0)
         context.translate(offset, 0)
         self.navigator.down_pos = self.contents.table_height
         self.navigator.on_draw(widget, context)
         context.translate(-offset, 0)
-        context.rectangle(-4, 4 - self.contents.title_height, offset + right_margin, self.contents.table_height + 2 + self.contents.title_height)
+        rectangle_width = left_margin + offset + navigator_margin + right_margin
+        rectangle_height = self.contents.table_height + up_margin + down_margin
+        context.rectangle(
+            -left_margin,
+            -up_margin,
+            rectangle_width,
+            rectangle_height
+        )
         context.stroke()
+
+        button_left = (rectangle_width - left_margin) / 2
+        button_left = 0
+        button_left = rectangle_width - left_margin
+        button_up = rectangle_height + up_margin
+
+        self.back_button.translate(button_left, button_up)
+        context.translate(button_left, button_up)
+        self.back_button.on_draw(self, context)
 
 
 
 def main() -> int:
     main_window = MainWindow(title="table")
 
-    root = Root(width=500, height=50)
+    root = Root(width=-1, height=-1)
     main_window.add(root)
 
-    table = Table([
-        TableEntry("monopattino", 3, 20, 20),
-        TableEntry("pachidermaa", 10, 5, 5),
-        TableEntry("pachidermab", 10, 5, 5),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-        TableEntry("supercalifragilistichespiralidoso", 100, 5000, 5000),
-    ])
+    file_names=["al_parco.json", "brachiosauri.json", "monopattino.json", "mostro.json"]
+    schemes = [parse_file_name("../data/" + name) for name in file_names]
+
+    table_entries = [
+        TableEntry(scheme.title, scheme.hard, len(scheme.rows), len(scheme.cols))
+        for scheme in schemes
+    ]
+
+    for scheme in schemes:
+        print(scheme.title)
+
+    table = Table(table_entries)
+
+    table.translate(50, 50)
 
     table.skip = 1
     table.how_many = 10
 
-    table.on_click = lambda: root.set_min_size(200, 200)
+    table.set_back_callback(lambda: root.set_min_size(200, 200))
+    table.set_contents_callback(lambda x: print("{} selected".format(x)))
     table.font_size = 20
-    table.translate(50, 50)
     root.set_child(table)
+
+    main_window.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.9,.9,.9,1))
 
     main_window.start_main()
 

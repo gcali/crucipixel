@@ -55,9 +55,3 @@ if __name__ == '__main__':
     files=["al_parco.json", "brachiosauri.json", "monopattino.json", "mostro.json"]
     for name in files:
         scheme = parse_file_name("../data/" + name)
-        new_cols = [list(reversed(l)) for l in scheme.cols]
-        print(new_cols)
-        scheme.cols = new_cols
-        new_string = encode_scheme(scheme)
-        with open("../data/" + name, "w") as f:
-            print(new_string, file=f)
