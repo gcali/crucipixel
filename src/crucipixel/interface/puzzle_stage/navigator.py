@@ -68,6 +68,9 @@ class Navigator(UncheckedContainer):
         self.set_translate(total_width - transl_width, total_height - transl_height)
         return super().fromWidgetCoords
 
+    @property
+    def width(self):
+        return self.background_rectangle.width
 
     def on_draw(self,widget,context):
 

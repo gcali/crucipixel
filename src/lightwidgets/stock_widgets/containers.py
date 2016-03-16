@@ -3,6 +3,8 @@ Created on May 20, 2015
 
 @author: giovanni
 '''
+import cairo
+
 from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.geometry import Point, Rectangle
 from lightwidgets.events import MouseEvent
@@ -16,7 +18,7 @@ class Container(Widget):
         super().__init__(*args,**kwargs)
         self.ID = "Container"
         self._sizes = {}
-    
+
     @property
     def list(self):
         raise NotImplementedError()
@@ -33,8 +35,8 @@ class Container(Widget):
     
     def remove_id(self,id_v:"id"):
         raise NotImplementedError()
-    
-    def on_draw(self,widget,context):
+
+    def on_draw(self, widget: Widget, context: cairo.Context):
         for child in self.list:
             context.save()
             context.transform(child.fromWidgetCoords)
@@ -46,8 +48,9 @@ class Container(Widget):
             child.on_draw(self,context)
             context.restore()
     
-    def update_min_size(self, widget, value):
-        self.sizes[widget] = value
+    def update_min_size(self, value):
+        self.min_size = value
+        # self.sizes[widget] = value
     
     def get_allocated_size(self, widget):
         try:
@@ -171,7 +174,8 @@ class UncheckedContainer(Container):
         self._widget_list = sorted(self._widget_list,key=lambda x:-x[0])
         widget.father = self
         try:
-            self.sizes[widget] = widget.min_size
+            self.min_size = widget.min_size
+            print("New min size!", widget.min_size)
         except AttributeError:
             pass
         return widget

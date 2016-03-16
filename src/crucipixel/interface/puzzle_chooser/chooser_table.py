@@ -8,7 +8,7 @@ from typing import List, Tuple, Iterable, Callable
 import cairo
 import itertools
 
-
+from crucipixel.data.crucipixel_scheme import CrucipixelScheme
 from crucipixel.data.json_parser import parse_file_name
 from crucipixel.interface import global_constants
 from lightwidgets.events import MouseEvent
@@ -455,8 +455,6 @@ class TableContents(Widget):
 
         expected_height = title_extents.total_height + self.margin
 
-        print("Base height:", expected_height, "Max height:", self._max_height)
-
         entries = self.entries
 
         base = skip
@@ -478,8 +476,6 @@ class TableContents(Widget):
         skip = base
 
         entries = self.entries[skip:skip + how_many]
-
-        print("Base:", base, "Up to:", up_to)
 
         def table_extents_iterator():
             return table_extents.iter_over(
@@ -536,7 +532,6 @@ class TableContents(Widget):
         end_x = table_extents.entries_width
         curr_y = start_y + self.margin
         end_y = table_extents.get_height_up_to(skip, how_many) + start_y + self.margin + 1
-        print("End y:", end_y, "How many:", how_many)
 
         self.table_height = end_y
         self.table_width = end_x
@@ -575,10 +570,9 @@ class TableContents(Widget):
         context.restore()
 
         self._shown = how_many
-        print("Setting show at ", self._shown)
 
 
-class Table(UncheckedContainer):
+class ChooserTable(UncheckedContainer):
 
     def __init__(self, entries: List[TableEntry]=[], **kwargs):
         super().__init__()
@@ -677,6 +671,14 @@ class Table(UncheckedContainer):
         self.back_button.on_draw(self, context)
 
 
+def scheme_to_entry(scheme: CrucipixelScheme) -> TableEntry:
+    return TableEntry(
+        scheme.title,
+        scheme.hard,
+        len(scheme.rows),
+        len(scheme.cols)
+    )
+
 
 def main() -> int:
     main_window = MainWindow(title="table")
@@ -695,7 +697,7 @@ def main() -> int:
     for scheme in schemes:
         print(scheme.title)
 
-    table = Table(table_entries)
+    table = ChooserTable(table_entries)
 
     table.translate(50, 50)
 

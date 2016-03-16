@@ -30,7 +30,7 @@ class Widget:
         self._clip_height = Widget.NO_CLIP
         self._mouse_is_in = False
 
-        if not min_size is None:
+        if min_size is not None:
             self._min_size = min_size
     
     def __str__(self):
@@ -47,7 +47,7 @@ class Widget:
     
     def refresh_min_size(self):
         try:
-            self.father.update_min_size(self,self.min_size)
+            self.father.update_min_size(self.min_size)
         except AttributeError:
             pass
 
@@ -148,7 +148,6 @@ class Widget:
     @clip_rectangle.setter
     def clip_rectangle(self,value):
         if value is None:
-            print("Setting!")
             self._clip_start = None
         else:
             self._clip_start = value.start

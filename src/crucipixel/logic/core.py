@@ -7,6 +7,9 @@ from itertools import zip_longest
 from sys import argv
 from typing import List, Tuple
 
+from crucipixel.data.crucipixel_scheme import CrucipixelScheme
+
+
 
 class Crucipixel:
     
@@ -174,6 +177,16 @@ class Crucipixel:
         col_guides = "Col guides: " + Crucipixel._guide_to_string(self.col_guides)
         total_str = rows_str + [row_guides] + [col_guides]
         return "\n".join(total_str)
+
+
+def scheme_to_core(scheme: CrucipixelScheme) -> Crucipixel:
+    return Crucipixel(
+        len(scheme.rows),
+        len(scheme.cols),
+        scheme.rows,
+        scheme.cols
+    )
+
 
 if __name__ == '__main__':
     def print_guide(guide):

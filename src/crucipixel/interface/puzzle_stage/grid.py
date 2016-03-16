@@ -3,6 +3,7 @@ Created on May 19, 2015
 
 @author: giovanni
 """
+from time import sleep
 from typing import Tuple
 
 import cairo
@@ -78,10 +79,12 @@ class CrucipixelGrid(Widget):
 
         self.number_of_cols = core_crucipixel.cols
         self.number_of_rows = core_crucipixel.rows
+
+        print("How many rows and cols?", self.number_of_rows, self.number_of_cols)
         self._core_crucipixel = core_crucipixel
         self.update_status_from_crucipixel()
 
-        self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_height+2,self._total_width+2)
+        self.clip_rectangle = Rectangle(Point(-.5,-.5),self._total_width+2,self._total_height+2)
 
         self.should_drag = False
         self.is_dragging = False
@@ -277,7 +280,7 @@ class CrucipixelGrid(Widget):
                                             row * self.cell_height),
                                       self.cell_width,
                                       self.cell_height)
-                if row < 5 and col < 5:
+                if row == 31 and col < 5:
                     pass
                 draw_cell(v, rectangle)
                         
@@ -511,7 +514,7 @@ class CrucipixelGrid(Widget):
         return False
     
     def is_point_in(self, p: Point, category=MouseEvent.UNKNOWN):
-        print("Asking if I was in", category)
+        # print("Asking if I was in", category)
         if category == MouseEvent.MOUSE_MOVE and self.is_mouse_selection_on:
             return True
         else:

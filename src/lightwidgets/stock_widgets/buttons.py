@@ -41,10 +41,10 @@ class BetterButton(Widget):
 
         self._mouse_up_interested = None
 
-    def is_point_in(self,p: Point ,category=MouseEvent.UNKNOWN):
+    def is_point_in(self,p: Point, category=MouseEvent.UNKNOWN):
         if self.shape is None:
             return False
-        elif self._mouse_up_interested:
+        elif category == MouseEvent.MOUSE_UP and self._mouse_up_interested:
             return True
         else:
             return self.shape.is_point_in(p)
@@ -56,12 +56,10 @@ class BetterButton(Widget):
     def on_mouse_up(self, widget: "Widget", event: MouseEvent):
         if self.on_click_action is not None:
             self.on_click_action()
+        self._mouse_up_interested = False
         return super().on_mouse_up(widget, event)
 
-    def on_draw(self, widget: Widget, context: cairo.Context):
-
-        start_x, start_y = context.get_current_point()
-
+    def set_shape_from_context(self, context: cairo.Context):
         label = self.label
         padding = self.padding
         context.set_font_size(self.font_size)
@@ -69,23 +67,37 @@ class BetterButton(Widget):
         width = padding * 2 + xa
         height = padding * 2 + h
 
-        context.set_source_rgb(*self.background_color)
         if self.origin == self.LEFT:
             start = Point(0, 0)
         elif self.origin == self.CENTER:
             start = Point(-width/2, 0)
         else:
             start = Point(-width, 0)
-        shape = DrawableRoundedRectangle(start, width, height)
+        self.shape = DrawableRoundedRectangle(start, width, height)
+
+    def on_draw(self, widget: Widget, context: cairo.Context):
+
+        start_x, start_y = context.get_current_point()
+        context.set_font_size(self.font_size)
+
+        context.move_to(0, 0)
+
+        if self.shape is None:
+            self.set_shape_from_context(context)
+        shape = self.shape
+        start = shape.start
+        padding = self.padding
+        h = shape.height - 2 * padding
+        label = self.label
+
+        context.set_source_rgb(*self.background_color)
         shape.draw_on_context(context)
         context.fill()
 
-        context.move_to(start_x + start.x + padding,
-                        start_y + start.y + padding + h)
+        context.move_to(start.x + padding,
+                        start.y + padding + h)
         context.set_source_rgb(*self.label_color)
         context.show_text(label)
-
-        self.shape = shape
 
 
 def main():

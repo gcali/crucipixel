@@ -3,13 +3,17 @@ Created on May 19, 2015
 
 @author: giovanni
 '''
+import cairo
+
 from crucipixel.data.json_parser import parse_file_name
+from crucipixel.interface.puzzle_stage.buttons import GridButtons
 from crucipixel.interface.puzzle_stage.navigator import Navigator
 from crucipixel.logic import core
 from lightwidgets.geometry import Point
 from gi.repository import Gdk
 
 from lightwidgets.stock_widgets.root import MainWindow, Root
+from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.support import Bunch
 from lightwidgets.animator import AccMovement
 from crucipixel.interface import global_constants
@@ -160,7 +164,7 @@ class CompleteCrucipixel(UncheckedContainer):
     # def on_mouse_exit(self):
     #     return super().on_mouse_exit()
         
-class MainArea(UncheckedContainer):
+class PuzzleScreen(UncheckedContainer):
     
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
@@ -169,8 +173,20 @@ class MainArea(UncheckedContainer):
         self.selector = None
         self._mouse_down = False
         self._click_point = Point(0,0)
-        self.counter=0
+        # self.counter = 0
         self.navigator = None
+        self.buttons = None
+
+    def start_all(self, crucipixel:"core.CompleteCrucipixel"):
+        self.start_crucipixel(crucipixel)
+        self.start_selector()
+        self.start_navigator()
+        self.start_buttons()
+
+    def start_buttons(self):
+        self.buttons = GridButtons()
+        self.buttons.ID = "GridButtons"
+        self.add(self.buttons, top=-1)
 
     def start_navigator(self):
         self.navigator = Navigator()
@@ -210,6 +226,14 @@ class MainArea(UncheckedContainer):
             self._mouse_down = False
         super().on_mouse_up(w,e)
 
+    def on_draw(self, widget: Widget, context: cairo.Context):
+        navigator_width = self.navigator.width
+        buttons_width, _ = self.buttons.get_width_height(context)
+
+        self.min_size = navigator_width + buttons_width + 10, 100
+
+        super().on_draw(widget, context)
+
 
 def main() -> int:
     cruci_scheme = parse_file_name("../data/monopattino.json")
@@ -219,7 +243,7 @@ def main() -> int:
         cruci_scheme.rows,
         cruci_scheme.cols
     )
-    complete = MainArea()
+    complete = PuzzleScreen()
     complete.start_crucipixel(cruci_core)
     complete.start_selector()
     complete.start_navigator()

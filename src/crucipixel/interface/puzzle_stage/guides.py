@@ -167,10 +167,7 @@ class Guides(Widget):
                     if e.wide_cell.is_point_in(p):
                         return True
         return False
-        # value = super().is_point_in(p,category)
-        # print(self.ID, value, p, self.clip_rectangle)
-        # return value
-    
+
     def on_mouse_down(self, w, e):
         p = Point(e.x,e.y)
         for line in self.elements:

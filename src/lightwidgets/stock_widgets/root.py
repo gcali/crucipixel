@@ -44,12 +44,18 @@ class Root(Gtk.DrawingArea):
     
     @child.setter
     def child(self, value):
+        print("My child is now {}".format(str(value)))
         self._child = value
         value.father = self
-        if hasattr(value,"min_size"):
-            size_x,size_y = value.min_size
+        try:
+            print("Did it have a min size?")
+            size_x, size_y = value.min_size
+            print("New size!", size_x, size_y)
             self.set_min_size(size_x, size_y)
-        
+        except AttributeError as e:
+            print("No it didn't!", e)
+            pass
+
     @property
     def window_size(self):
         return self.current_size
@@ -62,11 +68,15 @@ class Root(Gtk.DrawingArea):
         window.add(self)
         self._main_window = window
 
+    def update_min_size(self, value):
+        self.set_min_size(value[0], value[1])
+
     def set_min_size(self, sizeX:"num", sizeY:"num"):
         self.set_size_request(sizeX, sizeY)
     
     def set_child(self, child:"Widget"):
         self.child = child
+        self.invalidate()
     
     def on_draw(self, widget:"Widget", context:"cairo.Context"):
         if self._child is not None:
@@ -149,9 +159,7 @@ class _RootChildSwitcher(Widget):
     def register_switch_to(self, signal_name:"str", widget:"Widget"):
         def switch():
             self.father.child = widget
-            print("What's the container size?", widget.container_size)
             widget.invalidate()
-            print("I'm switching!")
         self.register_signal(signal_name, switch)
 
 
