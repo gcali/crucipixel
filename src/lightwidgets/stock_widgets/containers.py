@@ -33,8 +33,8 @@ class Container(Widget):
     def remove_obj(self,widget):
         raise NotImplementedError()
     
-    def remove_id(self,id_v:"id"):
-        raise NotImplementedError()
+    # def remove_id(self,id_v:"id"):
+    #     raise NotImplementedError()
 
     def on_draw(self, widget: Widget, context: cairo.Context):
         for child in self.list:

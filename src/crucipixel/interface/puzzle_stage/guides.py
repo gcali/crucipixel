@@ -3,11 +3,19 @@ Created on May 19, 2015
 
 @author: giovanni
 '''
+from enum import Enum
 from typing import Tuple, List
+
+import cairo
+import math
+
+from gi.repository import Gtk
+from gi.repository import Gdk
 
 from crucipixel.data.json_parser import parse_file_name
 from lightwidgets.events import MouseEvent
 from lightwidgets.geometry import Point, Rectangle
+from lightwidgets.stock_widgets.containers import UncheckedContainer
 from lightwidgets.stock_widgets.root import Root, MainWindow
 from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.support import rgb_to_gtk
@@ -49,12 +57,215 @@ class GuideElement:
     @property
     def text(self):
         return str(self.value)
-        
 
-class Guides(Widget): 
+
+class Orientation(Enum):
+
     VERTICAL = 0
     HORIZONTAL = 1
-    
+
+
+class _GuideLine(Widget):
+
+    def __init__(self, elements: List[int],
+                 orientation: Orientation, line_thickness: int,
+                 font_size: int, max_size: int = None,
+                 element_distance: int=10, line_distance: int=2,
+                 **kwargs):
+        super().__init__(**kwargs)
+
+        if not elements:
+            elements = [0]
+        self._elements = [str(e) for e in elements]
+        self.orientation = orientation
+        self.line_thickness = line_thickness
+        self.font_size = font_size
+        self.shape = None
+        self._positions = None
+        self.max_size = max_size
+        self.element_distance = element_distance
+        self.line_distance = line_distance
+
+        self.line_extension = 0
+
+    def set_shape_from_context(self, context: cairo.Context):
+
+        widths_heights = []
+
+        done = False
+
+        while not done:
+            max_width = 0
+            max_height = 0
+            context.set_font_size(self.font_size)
+
+            for e in reversed(self._elements):
+                xb, yb, w, h, xa, ya = context.text_extents(e)
+                widths_heights.append((xa, h))
+                max_width = max(max_width, xa)
+                max_height = max(max_height, h)
+
+
+            # adjust font size in case it's too big
+            if self.max_size is None:
+                done = True
+            else:
+                if self.orientation == Orientation.HORIZONTAL:
+                    reference = max_height
+                else:
+                    reference = max_width
+                if reference + 2 * self.line_distance <= self.max_size:
+                    done = True
+                else:
+                    self.font_size -= 1
+
+        positions = []
+        width = self.line_distance
+        height = self.line_distance
+
+        def get_padding(actual_size):
+            if self.max_size is not None:
+                return (self.max_size - actual_size) / 2
+            else:
+                return self.line_distance
+
+        if self.orientation == Orientation.HORIZONTAL:
+            def handle_extents(element_width, element_height):
+                nonlocal width, height, positions, max_height
+                width += element_width
+                positions.append(
+                    (-width,
+                     max_height + get_padding(max_height))
+                )
+                width += self.element_distance
+        else:
+            def handle_extents(element_width, element_height):
+                nonlocal width, height, positions, max_width
+                # print(element_width)
+                positions.append(
+                    (get_padding(element_width),
+                     -height)
+                )
+                height += element_height + self.element_distance
+
+
+        for w, h in widths_heights:
+            handle_extents(w, h)
+
+        if self.orientation == Orientation.HORIZONTAL:
+            height = max_height + get_padding(max_height) * 2
+            width = width - self.element_distance + self.line_distance
+            base_point = Point(-width, 0)
+        else:
+            width = max_width + get_padding(max_width) * 2
+            height = height - self.element_distance + self.line_distance
+            base_point = Point(0, -height)
+
+
+
+        self.shape = Rectangle(base_point, width, height)
+        self._positions = positions[::-1]
+
+    def on_draw(self, widget: Widget, context: cairo.Context):
+
+        # context.save()
+        # context.set_source_rgb(.5, 0, 0)
+        # context.arc(0, 0, 4, 0, math.pi * 2)
+        # context.fill()
+        # context.restore()
+
+        self.set_shape_from_context(context)
+        shape = self.shape
+
+        context.set_line_width(self.line_thickness)
+        if self.orientation == Orientation.HORIZONTAL:
+            context.move_to(shape.start.x - self.line_extension, shape.start.y)
+            context.line_to(shape.start.x + shape.width, shape.start.y)
+        else:
+            context.move_to(shape.start.x, shape.start.y - self.line_extension)
+            context.line_to(shape.start.x, shape.start.y + shape.height)
+        context.stroke()
+
+        for element, position in zip(self._elements, self._positions):
+            context.move_to(*position)
+            context.show_text(element)
+
+
+class BetterGuides(UncheckedContainer):
+
+    THICK_LINE = 2.5
+    NORMAL_LINE = 1
+
+    def __init__(self, elements: List[List[int]],
+                 orientation: Orientation,
+                 cell_size,
+                 preferred_font_size: int = 12,
+                 **kwargs):
+
+        super().__init__(**kwargs)
+
+        self._orientation = orientation
+        self.preferred_font_size = preferred_font_size
+
+        if orientation == Orientation.HORIZONTAL:
+            orientation = Orientation.VERTICAL
+        else:
+            orientation = Orientation.HORIZONTAL
+
+        self._lines = [
+            _GuideLine(elements[i], orientation,
+                       self.NORMAL_LINE if i % 5 != 0 else self.THICK_LINE,
+                       self.preferred_font_size,
+                       cell_size)
+            for i in range(len(elements))
+        ]
+
+        for line in self._lines:
+            self.add(line)
+
+    def on_draw(self, widget: Widget, context: cairo.Context):
+
+        max_height = 0
+        max_width = 0
+        for line in self._lines:
+            line.set_shape_from_context(context)
+            max_height = max(max_height, line.shape.height)
+            max_width = max(max_width, line.shape.width)
+
+
+        offset = 0
+        if self._orientation == Orientation.HORIZONTAL:
+            def handle_line(line: _GuideLine):
+                nonlocal offset
+                line.line_extension = max_height - line.shape.height
+                line.set_translate(offset, 0)
+                offset += line.shape.width
+        else:
+            def handle_line(line: _GuideLine):
+                nonlocal offset
+                line.line_extension = max_width - line.shape.width
+                line.set_translate(0, offset)
+                offset += line.shape.height
+
+        for line in self._lines:
+            handle_line(line)
+
+        super().on_draw(self, context)
+
+        context.set_line_width(self.THICK_LINE)
+        if self._orientation == Orientation.HORIZONTAL:
+            context.move_to(offset, 0)
+            context.line_to(offset, -max_height)
+        else:
+            context.move_to(0, offset)
+            context.line_to(-max_width, offset)
+        context.stroke()
+
+
+class Guides(Widget):
+    VERTICAL = 0
+    HORIZONTAL = 1
+
     @staticmethod
     def _elements_from_list(elements):
         new_elements = []
@@ -234,20 +445,68 @@ class Guides(Widget):
 
         context.restore()
 
+class _LineTestContainer(UncheckedContainer):
+
+    def __init__(self):
+        super().__init__()
+        self.guide_line = _GuideLine([1, 2, 3, 15, 3],
+                                     Orientation.HORIZONTAL,
+                                     line_thickness=1,
+                                     font_size=13,
+                                     max_size=20,
+                                     element_distance=10,
+                                     line_distance=2)
+        self.add(self.guide_line)
+
+    def on_draw(self, widget: Widget, context: cairo.Context):
+        self.guide_line.set_shape_from_context(context)
+        shape = self.guide_line.shape
+        self.guide_line.set_translate(shape.width + 10, shape.height + 10)
+
+        context.save()
+        context.set_source_rgb(1, 1, 1)
+        if self.guide_line.orientation == Orientation.HORIZONTAL:
+            context.rectangle(10, shape.height + 10, shape.width, 20)
+        else:
+            context.rectangle(shape.width + 10, 10, 20, shape.height)
+        context.fill()
+        context.restore()
+
+        super().on_draw(widget, context)
+
 
 def main() -> int:
+    # root = Root()
+    # main_window = MainWindow(title="Guide")
+    # main_window.add(root)
+    #
+    # cruci_scheme = parse_file_name("brachiosauri.json")
+    # print(cruci_scheme.cols)
+    #
+    # # guide = Guides(cruci_scheme.cols, Point(100, 100), 20, orientation=Guides.HORIZONTAL)
+    # guide = Guides(cruci_scheme.rows, Point(100, 100), 20, orientation=Guides.VERTICAL)
+    # root.set_child(guide)
+    #
+    # main_window.start_main()
+
     root = Root()
     main_window = MainWindow(title="Guide")
-    main_window.add(root)
+    main_window.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.9,.9,.9,1))
+    root.set_main_window(main_window)
+    # container = _LineTestContainer()
+    # container.translate(.5,.5)
+    #
+    # root.set_child(container)
 
-    cruci_scheme = parse_file_name("brachiosauri.json")
-    print(cruci_scheme.cols)
+    guides = BetterGuides([[], [1,2], [15,16,3]], Orientation.VERTICAL, 20)
 
-    # guide = Guides(cruci_scheme.cols, Point(100, 100), 20, orientation=Guides.HORIZONTAL)
-    guide = Guides(cruci_scheme.rows, Point(100, 100), 20, orientation=Guides.VERTICAL)
-    root.set_child(guide)
+    guides.translate(100.5, 100.5)
+
+    root.set_child(guides)
 
     main_window.start_main()
+
+
 
 if __name__ == '__main__':
     main()
