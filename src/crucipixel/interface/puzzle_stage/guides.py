@@ -3,6 +3,7 @@ Created on May 19, 2015
 
 @author: giovanni
 '''
+import random
 from enum import Enum
 from typing import Tuple, List
 
@@ -13,6 +14,7 @@ from gi.repository import Gtk
 from gi.repository import Gdk
 
 from crucipixel.data.json_parser import parse_file_name
+from crucipixel.interface import global_constants
 from lightwidgets.events import MouseEvent
 from lightwidgets.geometry import Point, Rectangle
 from lightwidgets.stock_widgets.containers import UncheckedContainer
@@ -53,7 +55,7 @@ class GuideElement:
         self.cancelled = cancelled 
         self.cell = cell
         self.wide_cell = wide_cell
-    
+
     @property
     def text(self):
         return str(self.value)
@@ -63,6 +65,37 @@ class Orientation(Enum):
 
     VERTICAL = 0
     HORIZONTAL = 1
+
+
+_color_map = {
+    "normal": rgb_to_gtk(0, 0, 0),
+    "done": rgb_to_gtk(46,139,87),
+    "wrong": rgb_to_gtk(178,34,34),
+    "cancelled": rgb_to_gtk(139,134,130)
+}
+
+class _GuideElement:
+
+    def __init__(self, label: str, position: Point=Point(0, 0)):
+        self.label = label
+        self.position = position
+        self.is_wrong = False
+        self.is_done = False
+        self.is_cancelled = False
+        self.width = 0
+        self.height = 0
+
+    @property
+    def color(self) -> Tuple[int, int, int]:
+        if self.is_wrong:
+            return _color_map["wrong"]
+        elif self.is_done:
+            return _color_map["done"]
+        elif self.is_cancelled:
+            return _color_map["cancelled"]
+        else:
+            return _color_map["normal"]
+
 
 
 class _GuideLine(Widget):
@@ -76,17 +109,33 @@ class _GuideLine(Widget):
 
         if not elements:
             elements = [0]
-        self._elements = [str(e) for e in elements]
+        self._elements = [_GuideElement(str(e)) for e in elements]
         self.orientation = orientation
         self.line_thickness = line_thickness
         self.font_size = font_size
         self.shape = None
-        self._positions = None
         self.max_size = max_size
         self.element_distance = element_distance
         self.line_distance = line_distance
+        self.mouse_was_down = False
 
         self.line_extension = 0
+        self._selected_cell = None
+
+    def set_done(self, is_it: bool):
+        for e in self._elements:
+            e.is_done = is_it
+
+    def set_wrong(self, is_it: bool):
+        for e in self._elements:
+            e.is_wrong = is_it
+
+    def set_cancelled(self, is_it: bool, index: int):
+        self._elements[index].is_cancelled = is_it
+
+    def toggle_cancelled(self, index: int):
+        e = self._elements[index]
+        e.is_cancelled = not e.is_cancelled
 
     def set_shape_from_context(self, context: cairo.Context):
 
@@ -100,8 +149,10 @@ class _GuideLine(Widget):
             context.set_font_size(self.font_size)
 
             for e in reversed(self._elements):
-                xb, yb, w, h, xa, ya = context.text_extents(e)
+                xb, yb, w, h, xa, ya = context.text_extents(e.label)
                 widths_heights.append((xa, h))
+                e.width = xa
+                e.height = h
                 max_width = max(max_width, xa)
                 max_height = max(max_height, h)
 
@@ -120,8 +171,8 @@ class _GuideLine(Widget):
                     self.font_size -= 1
 
         positions = []
-        width = self.line_distance
-        height = self.line_distance
+        width = self.element_distance
+        height = self.element_distance
 
         def get_padding(actual_size):
             if self.max_size is not None:
@@ -130,27 +181,24 @@ class _GuideLine(Widget):
                 return self.line_distance
 
         if self.orientation == Orientation.HORIZONTAL:
-            def handle_extents(element_width, element_height):
+            def handle_extents(e: _GuideElement):
                 nonlocal width, height, positions, max_height
-                width += element_width
-                positions.append(
-                    (-width,
-                     max_height + get_padding(max_height))
-                )
+                width += e.width
+                e.position = (-width,
+                              max_height + get_padding(max_height))
                 width += self.element_distance
         else:
-            def handle_extents(element_width, element_height):
+            def handle_extents(e: _GuideElement):
                 nonlocal width, height, positions, max_width
-                # print(element_width)
-                positions.append(
-                    (get_padding(element_width),
-                     -height)
-                )
-                height += element_height + self.element_distance
+                e.position = (get_padding(e.width),
+                              -height)
+                height += e.height + self.element_distance
 
+        # for w, h in widths_heights:
+        #     handle_extents(w, h)
 
-        for w, h in widths_heights:
-            handle_extents(w, h)
+        for element in reversed(self._elements):
+            handle_extents(element)
 
         if self.orientation == Orientation.HORIZONTAL:
             height = max_height + get_padding(max_height) * 2
@@ -161,18 +209,11 @@ class _GuideLine(Widget):
             height = height - self.element_distance + self.line_distance
             base_point = Point(0, -height)
 
-
-
         self.shape = Rectangle(base_point, width, height)
-        self._positions = positions[::-1]
+        # for e, p in zip(self._elements, reversed(positions)):
+        #     e.position = p
 
     def on_draw(self, widget: Widget, context: cairo.Context):
-
-        # context.save()
-        # context.set_source_rgb(.5, 0, 0)
-        # context.arc(0, 0, 4, 0, math.pi * 2)
-        # context.fill()
-        # context.restore()
 
         self.set_shape_from_context(context)
         shape = self.shape
@@ -186,12 +227,41 @@ class _GuideLine(Widget):
             context.line_to(shape.start.x, shape.start.y + shape.height)
         context.stroke()
 
-        for element, position in zip(self._elements, self._positions):
-            context.move_to(*position)
-            context.show_text(element)
+        for element in self._elements:
+            context.move_to(*element.position)
+            context.set_source_rgb(*element.color)
+            context.show_text(element.label)
+
+    def get_cell(self, p: Point):
+        delta = self.line_distance
+        for index, element in enumerate(self._elements):
+            if Rectangle(Point(*element.position) + Point(-delta, delta),
+                         element.width + 2 * delta,
+                         -element.height - 2 * delta).is_point_in(p):
+                return index
+        return None
+
+    def on_mouse_down(self, widget: Widget, event: MouseEvent):
+        self._selected_cell = self.get_cell(event)
+
+    def on_mouse_up(self, widget: Widget, event: MouseEvent):
+        if self._selected_cell is not None and \
+                        self._selected_cell == self.get_cell(event):
+            self.toggle_cancelled(self._selected_cell)
+            self.invalidate()
+        self._selected_cell = None
+
+    def is_point_in(self, p: Point, category=MouseEvent.UNKNOWN):
+        if self.shape is None:
+            return False
+        elif (category == MouseEvent.MOUSE_UP and self.mouse_was_down) \
+                or self.shape.is_point_in(p):
+            return True
+        else:
+            return False
 
 
-class BetterGuides(UncheckedContainer):
+class BetterGuide(UncheckedContainer):
 
     THICK_LINE = 2.5
     NORMAL_LINE = 1
@@ -222,6 +292,26 @@ class BetterGuides(UncheckedContainer):
 
         for line in self._lines:
             self.add(line)
+
+        def change_status(index: int, status: str, value: bool):
+            print("changin status of", index)
+            if status == "wrong":
+                self._lines[index].set_wrong(value)
+            elif status == "done":
+                self._lines[index].set_done(value)
+
+        def activate_status(status_line: List[Tuple[str, int]]):
+            for line in self._lines:
+                line.set_done(False)
+                line.set_wrong(False)
+            for (status, line) in status_line:
+                change_status(line, status, True)
+            self.invalidate()
+
+        if self._orientation == Orientation.HORIZONTAL:
+            self.register_signal("activate-hor-status", activate_status)
+        else:
+            self.register_signal("activate-ver-status", activate_status)
 
     def on_draw(self, widget: Widget, context: cairo.Context):
 
@@ -498,7 +588,7 @@ def main() -> int:
     #
     # root.set_child(container)
 
-    guides = BetterGuides([[], [1,2], [15,16,3]], Orientation.VERTICAL, 20)
+    guides = BetterGuide([[], [1, 2], [15, 16, 3]], Orientation.HORIZONTAL, 20)
 
     guides.translate(100.5, 100.5)
 

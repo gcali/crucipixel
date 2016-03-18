@@ -64,6 +64,18 @@ class GridButtons(UncheckedContainer):
     def _button_translation(self, button: BetterButton) -> int:
         return button.shape.width + self._padding
 
+    def on_mouse_down(self, w, e):
+        self._mouse_down = True
+        super().on_mouse_down(w, e)
+        return True
+
+    def on_mouse_up(self, w, e):
+        self._mouse_down = False
+        return super().on_mouse_up(w, e)
+
+    def on_mouse_move(self, w, e):
+        super().on_mouse_move(w, e)
+        return False
 
     def get_width_height(self, context: cairo.Context) -> Tuple[int, int]:
         height = 0
@@ -79,7 +91,6 @@ class GridButtons(UncheckedContainer):
 
         x_offset = self.father.container_size[0] - self._padding
         y_offset = self._padding
-
 
         width, height = self.get_width_height(context)
 

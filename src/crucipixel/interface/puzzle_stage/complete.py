@@ -17,7 +17,8 @@ from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.support import Bunch
 from lightwidgets.animator import AccMovement
 from crucipixel.interface import global_constants
-from crucipixel.interface.puzzle_stage.guides import Guides
+from crucipixel.interface.puzzle_stage.guides import Guides, BetterGuide, \
+    Orientation
 from crucipixel.interface.puzzle_stage.grid import CrucipixelGrid
 from crucipixel.interface.puzzle_stage.selector import Selector
 from lightwidgets.stock_widgets.containers import UncheckedContainer
@@ -32,15 +33,26 @@ def gdk_color(*args):
 class CompleteCrucipixel(UncheckedContainer):
 
     def _init_guides(self, crucipixel):
-        self.horizontal_guide = Guides(start=Point(0, 0), elements=crucipixel.col_guides,
-            size=self.cell_size,
-            orientation=Guides.HORIZONTAL)
-        self.horizontal_guide.ID = "Horizontal Guide"
-        self.vertical_guide = Guides(start=Point(0, 0),
+        # self.horizontal_guide = Guides(start=Point(0, 0), elements=crucipixel.col_guides,
+        #     size=self.cell_size,
+        #     orientation=Guides.HORIZONTAL)
+        # self.horizontal_guide.ID = "Horizontal Guide"
+        # self.vertical_guide = Guides(start=Point(0, 0),
+        #     elements=crucipixel.row_guides,
+        #     size=self.cell_size,
+        #     orientation=Guides.VERTICAL)
+        # self.vertical_guide.ID = "Vertical Guide"
+
+        self.horizontal_guide = BetterGuide(
+            elements=crucipixel.col_guides,
+            cell_size=self.cell_size,
+            orientation=Orientation.HORIZONTAL
+        )
+        self.vertical_guide = BetterGuide(
             elements=crucipixel.row_guides,
-            size=self.cell_size,
-            orientation=Guides.VERTICAL)
-        self.vertical_guide.ID = "Vertical Guide"
+            cell_size=self.cell_size,
+            orientation=Orientation.VERTICAL
+        )
         self.add(self.horizontal_guide)
         self.add(self.vertical_guide)
 
@@ -233,6 +245,10 @@ class PuzzleScreen(UncheckedContainer):
         self.min_size = navigator_width + buttons_width + 10, 100
 
         super().on_draw(widget, context)
+
+    def set_quit_button_callback(self, value):
+        if self.buttons is not None:
+            self.buttons.on_quit_action = value
 
 
 def main() -> int:

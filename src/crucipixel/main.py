@@ -53,6 +53,7 @@ def create_load_scheme(root: Root, schemes: List[CrucipixelScheme]) -> None:
         puzzle_screen = PuzzleScreen(min_size=(500, 500))
         puzzle_screen.translate(.5, .5)
         puzzle_screen.start_all(core_crucipixel)
+        puzzle_screen.set_quit_button_callback(create_new_game(root))
         # puzzle_screen.start_crucipixel(core_crucipixel)
         # puzzle_screen.start_navigator()
         # puzzle_screen.start_selector()

@@ -53,7 +53,7 @@ class Navigator(UncheckedContainer):
 
     def on_mouse_move(self, w, e):
         super().on_mouse_move(w, e)
-        return not self._should_pass_move
+        return False
 
     def on_mouse_down(self, w, e):
         super().on_mouse_down(w, e)

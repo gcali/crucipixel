@@ -51,7 +51,7 @@ class BetterButton(Widget):
 
     def on_mouse_down(self, widget: "Widget", event: MouseEvent):
         self._mouse_up_interested = True
-        return super().on_mouse_down(widget, event)
+        return True
 
     def on_mouse_up(self, widget: "Widget", event: MouseEvent):
         if self.on_click_action is not None:
