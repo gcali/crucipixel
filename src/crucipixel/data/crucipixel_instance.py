@@ -14,7 +14,7 @@ class MoveAtom:
     def __init__(self, row: int, col: int, value: CrucipixelCellValue):
         self.row = row
         self.col = col
-        self.value = value
+        self.value = value.value
 
     def to_json_object(self) -> object:
         return [
@@ -25,7 +25,7 @@ class MoveAtom:
 
     @staticmethod
     def from_json_object(o: object) -> "MoveAtom":
-        return MoveAtom(o[0], o[1], o[2])
+        return MoveAtom(o[0], o[1], CrucipixelCellValue(o[2]))
 
     def __str__(self):
         return "({},{}|{})".format(self.row, self.col, self.value)
