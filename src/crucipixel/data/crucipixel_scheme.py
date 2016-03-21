@@ -30,6 +30,37 @@ class CrucipixelScheme:
             r.append("\t\t" + str(col))
         return "\n".join(r)
 
+    def to_json_object(self) -> object:
+        title = self.title
+        rows = self.rows
+        cols = self.cols
+
+        json_object = {
+            "title": title,
+            "rows": rows,
+            "cols": cols
+        }
+        try:
+            hard = self.hard
+            if hard is not None and hard > 0:
+                json_object["hard"] = hard
+        except AttributeError:
+            pass
+
+        return json_object
+
+    @staticmethod
+    def from_json_object(o: object) -> "CrucipixelScheme":
+        title = o['title']
+        rows = o['rows']
+        cols = o['cols']
+        try:
+            hard = o['hard']
+        except KeyError:
+            hard = 0
+
+        return CrucipixelScheme(title, rows, cols, hard)
+
 
 def main() -> int:
     print(CrucipixelScheme("Ciao", [[0]], [[1]]))
