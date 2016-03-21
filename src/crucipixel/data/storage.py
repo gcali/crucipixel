@@ -30,7 +30,7 @@ def get_schemes(options: Options = None) -> List[CrucipixelScheme]:
     assure_path(path)
     file_names = [name for name in glob.iglob(path + os.sep + "*.json")]
 
-    return [json_parser.parse_file_name(name) for name in file_names]
+    return [json_parser.parse_file_name(name).scheme for name in file_names]
 
 
 def main() -> int:

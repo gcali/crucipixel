@@ -5,10 +5,100 @@ Created on Mar 13, 2015
 '''
 from itertools import zip_longest
 from sys import argv
-from typing import List, Tuple
+from typing import List, Tuple, Iterable
 
+from crucipixel.data.crucipixel_instance import CrucipixelInstance, MoveAtom, \
+    CrucipixelCellValue
 from crucipixel.data.crucipixel_scheme import CrucipixelScheme
+from crucipixel.data.guides_instance import GuidesInstance
+from crucipixel.interface.puzzle_stage.guides import Orientation
 
+
+class BetterCrucipixel:
+
+    def __init__(self, scheme: CrucipixelScheme,
+                       crucipixel_instance: CrucipixelInstance = None,
+                       guides_instance: GuidesInstance = None):
+
+        self.scheme = scheme
+        if crucipixel_instance is not None:
+            self.crucipixel_instance = crucipixel_instance
+        else:
+            self.crucipixel_instance = CrucipixelInstance(len(scheme.rows),
+                                                          len(scheme.cols))
+        if guides_instance is not None:
+            self.guides_instance = guides_instance
+        else:
+            self.guides_instance = GuidesInstance()
+
+    def make_move(self, atoms: Iterable[MoveAtom]):
+        self.crucipixel_instance.make_move(atoms)
+
+    def get_row_col_value(self, row: int, col: int) -> CrucipixelCellValue:
+        self.crucipixel_instance.get_row_col_value(row, col)
+
+    def _get_line_iterator(self, orientation: Orientation,
+                           line: int) -> Iterable[CrucipixelCellValue]:
+        if orientation == Orientation.HORIZONTAL:
+            return (self.get_row_col_value(line, i)
+                    for i in range(len(self.scheme.cols)))
+        else:
+            return (self.get_row_col_value(i, line)
+                    for i in range(len(self.scheme.rows)))
+
+    def _get_minimal_line_iterator(self, orientation: Orientation,
+                                   line: int) -> Iterable[CrucipixelCellValue]:
+        found_empty = True
+        for cell in self._get_line_iterator(orientation, line):
+            if cell != CrucipixelCellValue.EMPTY:
+                found_empty = False
+                yield cell
+            elif not found_empty:
+                found_empty = True
+                yield cell
+
+    @staticmethod
+    def _get_guide_from_minimal_line(line: Iterable[CrucipixelCellValue]) \
+            -> Iterable[int]:
+        current = 0
+        for element in line:
+            if element == CrucipixelCellValue.EMPTY and current > 0:
+                yield current
+                current = 0
+            elif element == CrucipixelCellValue.SELECTED:
+                current += 1
+        if current != 0:
+            yield current
+
+    def is_line_wrong(self, orientation: Orientation, line: int) -> bool:
+        if orientation == Orientation.HORIZONTAL:
+            guide = self.scheme.rows[line]
+        else:
+            guide = self.scheme.cols[line]
+
+        guide_from_line = BetterCrucipixel._get_guide_from_minimal_line(
+            self._get_minimal_line_iterator(orientation, line)
+        )
+
+        for original, custom in zip_longest(guide, guide_from_line):
+            if original != custom:
+                return True
+            else:
+                return False
+
+    def is_line_done(self, orientation: Orientation, line: int) -> bool:
+        return not self.is_line_wrong(orientation, line)
+
+    def is_line_full(self, orientation: Orientation, line: int) -> bool:
+        for cell in self._get_line_iterator(orientation, line):
+            if cell == CrucipixelCellValue.DEFAULT:
+                return False
+        else:
+            return True
+
+    def toggle_guide_cancelled(self, orientation: Orientation, line: int,
+                               element: int):
+        self.guides_instance.toggle_cancelled(orientation, line, element)
 
 
 class Crucipixel:

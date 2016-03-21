@@ -13,8 +13,6 @@ import math
 from gi.repository import Gtk
 from gi.repository import Gdk
 
-from crucipixel.data.json_parser import parse_file_name
-from crucipixel.interface import global_constants
 from lightwidgets.events import MouseEvent
 from lightwidgets.geometry import Point, Rectangle
 from lightwidgets.stock_widgets.containers import UncheckedContainer

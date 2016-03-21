@@ -150,6 +150,10 @@ class Root(Gtk.DrawingArea):
     def register_switch_to(self, signal_name:"str", widget:"Widget"):
         return self._switcher.register_switch_to(signal_name, widget)
 
+    def quit(self):
+        if self._main_window is not None:
+            self._main_window.destroy()
+
 
 class _RootChildSwitcher(Widget):
     

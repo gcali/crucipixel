@@ -1,3 +1,4 @@
+from time import sleep
 from typing import Iterable, Tuple
 
 from crucipixel.interface.puzzle_stage.guides import Orientation
@@ -7,7 +8,7 @@ class GuidesInstance:
 
     def __init__(self, cancelled: Iterable[Tuple[Orientation, int, int]] = None):
 
-        if cancelled = None:
+        if cancelled is None:
             self._cancelled = set()
         else:
             self._cancelled = set(cancelled)
@@ -37,6 +38,13 @@ class GuidesInstance:
     def __iter__(self):
         return self._cancelled.__iter__()
 
+    def to_json_object(self) -> object:
+        return [[value.value, row, col] for (value, row, col) in self]
+
+    @staticmethod
+    def from_json_object(json_object: object) -> "GuidesInstance":
+        return GuidesInstance(((Orientation(value), row, col) for value, row, col in json_object))
+
 
 def main():
     guide_instance = GuidesInstance()
@@ -59,6 +67,10 @@ def main():
         print(e)
     print("-" * 8)
     for e in guide_instance.iter_over_orientation(Orientation.VERTICAL):
+        print(e)
+
+    print("-" * 8)
+    for e in GuidesInstance.from_json_object(guide_instance.to_json_object()):
         print(e)
 
 if __name__ == '__main__':
