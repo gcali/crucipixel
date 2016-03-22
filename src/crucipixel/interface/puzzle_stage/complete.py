@@ -55,10 +55,7 @@ class CompleteCrucipixel(UncheckedContainer):
         print("Starting at", start)
         self.translate(start.x,start.y)
         self.cell_size = cell_size
-        # self.rows = crucipixel.rows
-        # self.cols = crucipixel.cols
         self.grid = CrucipixelGrid(crucipixel, cell_size, cell_size)
-        # self.grid.selection_style = CrucipixelGrid.SELECTION_RECTANGLE
         self.add(self.grid)
 
         self._init_guides(crucipixel)

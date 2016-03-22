@@ -4,7 +4,7 @@ Created on May 19, 2015
 @author: giovanni
 """
 from time import sleep
-from typing import Tuple
+from typing import Tuple, Iterable
 
 import cairo
 
@@ -28,6 +28,8 @@ class CrucipixelGrid(Widget):
         self.cell_width = cell_width
         self.cell_height = cell_height
 
+        self.clip_rectangle = Rectangle(Point(-1, -1), self._total_width + 2, self._total_height + 2)
+
         self.highlight_color = global_constants._highlight
 
         self.crucipixel_cell_value_to_color = {
@@ -36,8 +38,14 @@ class CrucipixelGrid(Widget):
             CrucipixelCellValue.SELECTED: global_constants._start_selected
         }
 
+        self._should_highlight = False
         self._highlight_row = None
         self._highlight_col = None
+
+        self._selection_value = None
+        self._selection_start_point = None
+        self._selection_end_point = None
+        self._selection_rectangle = None
 
     @property
     def _total_height(self) -> int:
@@ -56,7 +64,22 @@ class CrucipixelGrid(Widget):
         return self.crucipixel.number_of_cols
 
     def get_cell_value(self, row: int, col: int) -> CrucipixelCellValue:
-        return self.crucipixel.get_row_col_value(row, col)
+        selection = self._selection_rectangle
+        if selection is not None and selection.is_point_in(Point(col, row)):
+            return self._selection_value
+        else:
+            return self.crucipixel.get_row_col_value(row, col)
+
+    def _update_selection_rectangle(self):
+        if self._selection_start_point is not None and \
+           self._selection_end_point is not None:
+            s = self._selection_start_point
+            e = self._selection_end_point
+            upper = Point(min(s.col, e.col), min(s.row, e.row))
+            lower = Point(max(s.col, e.col), max(s.row, e.row))
+            height = lower.row - upper.row
+            width = lower.col - upper.col
+            self._selection_rectangle = Rectangle(upper, width, height)
 
     def _highlight_rectangles(self, context, row: int, col: int):
 
@@ -205,7 +228,8 @@ class CrucipixelGrid(Widget):
             context.line_to(width,y)
             context.stroke()
 
-        if self._highlight_col is not None and self._highlight_row is not None:
+        if self._highlight_col is not None and self._highlight_row is not None\
+                and self._should_highlight:
             self._highlight_rectangles(
                 context,
                 self._highlight_row,
@@ -213,6 +237,92 @@ class CrucipixelGrid(Widget):
             )
 
         context.restore()
+
+    def _point_to_row_col(self, point: Point) -> Tuple[int, int]:
+        row = int(point.y // self.cell_height)
+        col = int(point.x // self.cell_width)
+        return clamp(row, 0, self.number_of_rows), \
+               clamp(col, 0, self.number_of_cols)
+
+    def on_mouse_move(self, widget: Widget, event: MouseEvent) -> bool:
+        if self.is_point_in(event):
+            row, col = self._point_to_row_col(event)
+            self.highlight_row_col(row, col)
+            if self._selection_start_point is not None:
+                self._move_selection(row, col)
+            self.invalidate()
+        return False
+
+    def on_mouse_down(self, widget: Widget, event: MouseEvent) -> bool:
+        row, col = self._point_to_row_col(event)
+        self._start_selection(CrucipixelCellValue.SELECTED, row, col)
+        self.invalidate()
+        return True
+
+    def on_mouse_up(self, widget: "Widget", event: MouseEvent) -> bool:
+        self._end_selection()
+        return False
+
+    def _start_selection(self, value: CrucipixelCellValue, row: int, col: int):
+        self._selection_value = value
+        self._selection_start_point = Point(col, row)
+        self._selection_end_point = Point(col, row)
+        self._update_selection_rectangle()
+        self.crucipixel.make_move(self._get_moves())
+
+    def _get_moves(self) -> Iterable[MoveAtom]:
+        selection_rectangle = self._selection_rectangle
+        moves = (
+            MoveAtom(selection_rectangle.start.y + row_offset,
+                     selection_rectangle.start.x + col_offset,
+                     self._selection_value)
+            for col_offset in range(selection_rectangle.width + 1)
+            for row_offset in range(selection_rectangle.height + 1)
+        )
+        return moves
+
+    def _move_selection(self, row: int, col: int):
+        self._selection_end_point = Point(col, row)
+        self._update_selection_rectangle()
+        self.crucipixel.undo_move()
+        self.crucipixel.make_move(self._get_moves())
+
+    def _end_selection(self):
+        self._selection_end_point = None
+        self._selection_start_point = None
+        self._selection_rectangle = None
+        self._selection_value = None
+
+    def _reset_selection(self):
+        self._selection_start_point = None
+        self._selection_end_point = None
+        self._selection_rectangle = None
+        self._selection_value = None
+
+        self.crucipixel.undo_move()
+
+    def highlight_row_col(self, row: int, col: int):
+        self._highlight_row = row
+        self._highlight_col = col
+
+    def on_mouse_exit(self) -> bool:
+        self._should_highlight = False
+        self.invalidate()
+        return False
+
+    def is_point_in(self,p: Point ,category=MouseEvent.UNKNOWN) -> bool:
+        if category == MouseEvent.MOUSE_UP \
+                or category == MouseEvent.MOUSE_MOVE:
+            if self._selection_start_point is not None:
+                return True
+        return super().is_point_in(p, category)
+
+
+    def on_mouse_enter(self) -> bool:
+        self._should_highlight = True
+        self.invalidate()
+        return False
+
 
 
 class OldCrucipixelGrid(Widget):

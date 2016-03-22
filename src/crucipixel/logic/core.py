@@ -32,6 +32,9 @@ class Crucipixel:
     def make_move(self, atoms: Iterable[MoveAtom]):
         self.crucipixel_instance.make_move(atoms)
 
+    def undo_move(self):
+        self.crucipixel_instance.undo_last_move()
+
     def get_row_col_value(self, row: int, col: int) -> CrucipixelCellValue:
         return self.crucipixel_instance.get_row_col_value(row, col)
 
