@@ -9,14 +9,13 @@ from gi.overrides.Gtk import Gtk
 from gi.repository import Gdk
 
 from crucipixel.data import json_parser, storage
-from crucipixel.data.crucipixel_scheme import CrucipixelScheme
+from crucipixel.data.complete_model import CrucipixelCompleteModel
 from crucipixel.interface import global_constants
 from crucipixel.interface.main_menu import MainMenu, BetterMainMenu
 from crucipixel.interface.puzzle_chooser.chooser_table import ChooserTable, \
     scheme_to_entry
 from crucipixel.interface.puzzle_stage.complete import PuzzleScreen
 from crucipixel.logic import core
-from crucipixel.logic.core import scheme_to_core
 from lightwidgets.debug import WidgetDebug
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.support import gtk_to_rgb
@@ -34,9 +33,10 @@ class CustomDebug(WidgetDebug):
 
 def create_new_game(root: Root) -> None:
     def new_game() -> None:
-        schemes = storage.get_schemes()
-        chooser = ChooserTable([scheme_to_entry(scheme) for scheme in schemes])
-        chooser.set_contents_callback(create_load_scheme(root, schemes))
+        models = storage.get_models()
+        chooser = ChooserTable([scheme_to_entry(model.scheme)
+                                for model in models])
+        chooser.set_contents_callback(create_load_model(root, models))
         chooser.set_back_callback(create_main_menu(root))
 
         chooser.translate(50, 50)
@@ -45,11 +45,12 @@ def create_new_game(root: Root) -> None:
     return new_game
 
 
-def create_load_scheme(root: Root, schemes: List[CrucipixelScheme]) -> None:
+def create_load_model(root: Root, models: List[CrucipixelCompleteModel]) \
+        -> None:
 
-    def load_scheme(index: int) -> None:
-        scheme = schemes[index]
-        core_crucipixel = scheme_to_core(scheme)
+    def load_model(index: int) -> None:
+        model = models[index]
+        core_crucipixel = core.Crucipixel(model)
         puzzle_screen = PuzzleScreen(min_size=(500, 500))
         puzzle_screen.translate(.5, .5)
         puzzle_screen.start_all(core_crucipixel)
@@ -58,7 +59,7 @@ def create_load_scheme(root: Root, schemes: List[CrucipixelScheme]) -> None:
         # puzzle_screen.start_navigator()
         # puzzle_screen.start_selector()
         root.set_child(puzzle_screen)
-    return load_scheme
+    return load_model
 
 def create_main_menu(root: Root) -> None:
     def main_menu() -> None:

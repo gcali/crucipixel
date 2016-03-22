@@ -1,3 +1,4 @@
+from time import sleep
 from typing import Tuple, List
 
 from crucipixel.data.crucipixel_instance import CrucipixelInstance
@@ -10,7 +11,15 @@ class CrucipixelCompleteModel:
     def __init__(self, scheme: CrucipixelScheme,
                  instances: List[Tuple[CrucipixelInstance, GuidesInstance]]):
         self.scheme = scheme
-        self.instances = instances
+        if instances:
+            print("Instances!")
+            print(instances)
+            self.instances = instances
+        else:
+            self.instances = [
+                (CrucipixelInstance(len(scheme.rows), len(scheme.cols)),
+                GuidesInstance())
+            ]
 
     def to_json_object(self) -> object:
         return {

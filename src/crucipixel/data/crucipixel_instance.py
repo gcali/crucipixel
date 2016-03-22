@@ -14,13 +14,13 @@ class MoveAtom:
     def __init__(self, row: int, col: int, value: CrucipixelCellValue):
         self.row = row
         self.col = col
-        self.value = value.value
+        self.value = value
 
     def to_json_object(self) -> object:
         return [
             self.row,
             self.col,
-            self.value
+            self.value.value
         ]
 
     @staticmethod

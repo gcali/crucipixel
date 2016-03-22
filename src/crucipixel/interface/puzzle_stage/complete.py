@@ -32,24 +32,14 @@ def gdk_color(*args):
 
 class CompleteCrucipixel(UncheckedContainer):
 
-    def _init_guides(self, crucipixel):
-        # self.horizontal_guide = Guides(start=Point(0, 0), elements=crucipixel.col_guides,
-        #     size=self.cell_size,
-        #     orientation=Guides.HORIZONTAL)
-        # self.horizontal_guide.ID = "Horizontal Guide"
-        # self.vertical_guide = Guides(start=Point(0, 0),
-        #     elements=crucipixel.row_guides,
-        #     size=self.cell_size,
-        #     orientation=Guides.VERTICAL)
-        # self.vertical_guide.ID = "Vertical Guide"
-
+    def _init_guides(self, crucipixel: core.Crucipixel):
         self.horizontal_guide = BetterGuide(
-            elements=crucipixel.col_guides,
+            elements=crucipixel.scheme.cols,
             cell_size=self.cell_size,
             orientation=Orientation.HORIZONTAL
         )
         self.vertical_guide = BetterGuide(
-            elements=crucipixel.row_guides,
+            elements=crucipixel.scheme.rows,
             cell_size=self.cell_size,
             orientation=Orientation.VERTICAL
         )
@@ -57,7 +47,7 @@ class CompleteCrucipixel(UncheckedContainer):
         self.add(self.vertical_guide)
 
     def __init__(self,
-                 crucipixel,
+                 crucipixel: core.Crucipixel,
                  start=Point(0,0),
                  cell_size=15,
                  *args, **kwargs):
@@ -65,14 +55,14 @@ class CompleteCrucipixel(UncheckedContainer):
         print("Starting at", start)
         self.translate(start.x,start.y)
         self.cell_size = cell_size
-        self.rows = crucipixel.rows
-        self.cols = crucipixel.cols
-        self.grid = CrucipixelGrid(crucipixel, Point(0,0), cell_size, cell_size)
-        self.grid.selection_style = CrucipixelGrid.SELECTION_RECTANGLE
+        # self.rows = crucipixel.rows
+        # self.cols = crucipixel.cols
+        self.grid = CrucipixelGrid(crucipixel, cell_size, cell_size)
+        # self.grid.selection_style = CrucipixelGrid.SELECTION_RECTANGLE
         self.add(self.grid)
 
         self._init_guides(crucipixel)
-        self._current_scale = Point(1,1)
+        self._current_scale = Point(1, 1)
         self._direction_animations = {}
         self._movement = dict(global_constants._global_movement_keys)
 
@@ -181,7 +171,7 @@ class PuzzleScreen(UncheckedContainer):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.ID = "MainArea"
-        self.core_crucipixel = None
+        self.crucipixel = None
         self.selector = None
         self._mouse_down = False
         self._click_point = Point(0,0)
@@ -189,7 +179,7 @@ class PuzzleScreen(UncheckedContainer):
         self.navigator = None
         self.buttons = None
 
-    def start_all(self, crucipixel:"core.CompleteCrucipixel"):
+    def start_all(self, crucipixel: core.Crucipixel):
         self.start_crucipixel(crucipixel)
         self.start_selector()
         self.start_navigator()
@@ -211,24 +201,24 @@ class PuzzleScreen(UncheckedContainer):
         self.selector.ID = "Selector"
         self.add(self.selector,top=-1)
     
-    def start_crucipixel(self,crucipixel:"core.CompleteCrucipixel",
+    def start_crucipixel(self,crucipixel: core.Crucipixel,
                          start=Point(120,100),cell_size=20):
-        self.core_crucipixel = CompleteCrucipixel(crucipixel, start, cell_size)
-        self.core_crucipixel.ID="CompleteCrucipixel"
-        self.add(self.core_crucipixel)
+        self.crucipixel = CompleteCrucipixel(crucipixel, start, cell_size)
+        self.crucipixel.ID="CompleteCrucipixel"
+        self.add(self.crucipixel)
     
     def on_mouse_down(self, w, e):
         handled = super().on_mouse_down(w, e)
         if not handled:
             self._mouse_down = True
             self._click_point = Point(e.x,e.y)
-            self._translate_vector = Point(self.core_crucipixel.fromWidgetCoords.transform_point(0,0))
+            self._translate_vector = Point(self.crucipixel.fromWidgetCoords.transform_point(0,0))
     
     def on_mouse_move(self, w, e):
         if self._mouse_down:
             delta_x = int(e.x - self._click_point.x)
             delta_y = int(e.y - self._click_point.y)
-            self.core_crucipixel.set_translate(self._translate_vector.x + delta_x,
+            self.crucipixel.set_translate(self._translate_vector.x + delta_x,
                                           self._translate_vector.y + delta_y)
             self.invalidate()
         super().on_mouse_move(w,e)
@@ -252,15 +242,16 @@ class PuzzleScreen(UncheckedContainer):
 
 
 def main() -> int:
-    cruci_scheme = parse_file_name("../data/monopattino.json")
-    cruci_core = core.Crucipixel(
-        len(cruci_scheme.rows),
-        len(cruci_scheme.cols),
-        cruci_scheme.rows,
-        cruci_scheme.cols
-    )
+    crucipixel_model = parse_file_name("../data/monopattino.json")
+    crucipixel_core = core.Crucipixel(crucipixel_model)
+    # cruci_core = core.Crucipixel(
+    #     len(cruci_scheme.rows),
+    #     len(cruci_scheme.cols),
+    #     cruci_scheme.rows,
+    #     cruci_scheme.cols
+    # )
     complete = PuzzleScreen()
-    complete.start_crucipixel(cruci_core)
+    complete.start_crucipixel(crucipixel_core)
     complete.start_selector()
     complete.start_navigator()
 

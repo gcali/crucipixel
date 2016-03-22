@@ -8,6 +8,7 @@ from typing import Tuple
 
 import cairo
 
+from crucipixel.data.crucipixel_instance import CrucipixelCellValue, MoveAtom
 from crucipixel.data.json_parser import parse_file_name
 from crucipixel.interface import global_constants
 from crucipixel.logic import core
@@ -17,9 +18,205 @@ from lightwidgets.stock_widgets.root import Root, MainWindow
 from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.support import DefaultDict, clamp, get_from_to_inclusive
 
-
 class CrucipixelGrid(Widget):
-    
+
+    def __init__(self, crucipixel: core.Crucipixel,
+                 cell_width: int=10, cell_height: int=10, **kwargs):
+        super().__init__(**kwargs)
+
+        self.crucipixel = crucipixel
+        self.cell_width = cell_width
+        self.cell_height = cell_height
+
+        self.highlight_color = global_constants._highlight
+
+        self.crucipixel_cell_value_to_color = {
+            CrucipixelCellValue.EMPTY: global_constants._start_empty,
+            CrucipixelCellValue.DEFAULT: global_constants._start_default,
+            CrucipixelCellValue.SELECTED: global_constants._start_selected
+        }
+
+        self._highlight_row = None
+        self._highlight_col = None
+
+    @property
+    def _total_height(self) -> int:
+        return self.number_of_rows * self.cell_height
+
+    @property
+    def _total_width(self) -> int:
+        return self.number_of_cols * self.cell_width
+
+    @property
+    def number_of_rows(self) -> int:
+        return self.crucipixel.number_of_rows
+
+    @property
+    def number_of_cols(self) -> int:
+        return self.crucipixel.number_of_cols
+
+    def get_cell_value(self, row: int, col: int) -> CrucipixelCellValue:
+        return self.crucipixel.get_row_col_value(row, col)
+
+    def _highlight_rectangles(self, context, row: int, col: int):
+
+        self._highlight_border(context, row, col)
+
+        width = self._total_width
+        height = self._total_height
+
+        row_rectangle = Rectangle(Point(col * self.cell_width,0),
+                                  self.cell_width,
+                                  height)
+        col_rectangle = Rectangle(Point(0,row * self.cell_height),
+                                  width,
+                                  self.cell_height)
+        r, g, b = self.highlight_color
+        context.save()
+        context.set_source_rgba(r, g, b, .1)
+        context.rectangle(row_rectangle.start.x,
+                          row_rectangle.start.y,
+                          row_rectangle.width,
+                          row_rectangle.height)
+        context.fill()
+        context.rectangle(col_rectangle.start.x,
+                          col_rectangle.start.y,
+                          col_rectangle.width,
+                          col_rectangle.height)
+        context.fill()
+        context.restore()
+
+    def _highlight_border(self, context: cairo.Context, row: int, col: int):
+        width = self._total_width
+        height = self._total_height
+
+        line_width = 3
+        row_rectangles = [
+            Rectangle(
+                Point(1, row * self.cell_height - line_width / 2),
+                width - 2,
+                line_width
+            ),
+            Rectangle(
+                Point(1, (row + 1) * self.cell_height - line_width / 2),
+                width - 2,
+                line_width
+            )
+        ]
+        col_rectangles = [
+            Rectangle(
+                Point(col * self.cell_width - line_width / 2, 1),
+                line_width,
+                height - 2
+            ),
+            Rectangle(
+                Point((col + 1) * self.cell_width - line_width / 2, 1),
+                line_width,
+                height - 2
+            )
+        ]
+        context.save()
+        r, g, b = self.highlight_color
+        context.set_source_rgba(r, g, b, .6)
+        for row_rectangle in row_rectangles:
+            context.rectangle(row_rectangle.start.x,
+                              row_rectangle.start.y,
+                              row_rectangle.width,
+                              row_rectangle.height)
+            context.fill()
+        for col_rectangle in col_rectangles:
+            context.rectangle(col_rectangle.start.x,
+                              col_rectangle.start.y,
+                              col_rectangle.width,
+                              col_rectangle.height)
+            context.fill()
+        context.restore()
+
+    def _draw_cell(self, context: cairo.Context,
+                   cell_value: CrucipixelCellValue, area: Rectangle):
+
+        r, g, b = self.crucipixel_cell_value_to_color[cell_value]
+        context.set_source_rgb(r, g, b)
+        context.rectangle(area.start.x,
+                          area.start.y,
+                          area.width,
+                          area.height)
+        context.fill()
+        if True and cell_value == CrucipixelCellValue.EMPTY:
+            # draw the X
+            r, g, b = self.crucipixel_cell_value_to_color[
+                CrucipixelCellValue.SELECTED
+            ]
+            context.set_source_rgb(r, g, b)
+            context.set_line_cap(cairo.LINE_CAP_ROUND)
+            delta_x = self.cell_width // 2.8
+            delta_y = self.cell_height // 2.8
+            context.move_to(area.start.x + area.width - delta_x,
+                            area.start.y + delta_y)
+            context.line_to(area.start.x + delta_x,
+                            area.start.y + area.height - delta_y)
+            context.move_to(area.start.x + area.width - delta_x,
+                            area.start.y + area.width - delta_y)
+            context.line_to(area.start.x + delta_x,
+                            area.start.y + delta_y)
+            context.stroke()
+
+    def on_draw(self, widget, context):
+
+        context.save()
+        context.set_line_width(1)
+        width = self._total_width
+        height = self._total_height
+
+        for row in range(self.number_of_rows):
+            for col in range(self.number_of_cols):
+                value = self.get_cell_value(row, col)
+                rectangle = Rectangle(Point(col * self.cell_width,
+                                            row * self.cell_height),
+                                      self.cell_width,
+                                      self.cell_height)
+                self._draw_cell(context, value, rectangle)
+
+        context.set_source_rgb(0, 0, 0)
+        context.set_line_cap(cairo.LINE_CAP_SQUARE)
+        for i, x in enumerate(range(
+                0,
+                width + self.cell_width,
+                self.cell_width
+        )):
+            if i % 5 == 0:
+                context.set_line_width(2.5)
+            else:
+                context.set_line_width(1)
+            context.move_to(x,0)
+            context.line_to(x,height)
+            context.stroke()
+
+        for i, y in enumerate(range(
+                0,
+                height + self.cell_height,
+                self.cell_height
+        )):
+            if i % 5 == 0:
+                context.set_line_width(2.5)
+            else:
+                context.set_line_width(1)
+            context.move_to(0,y)
+            context.line_to(width,y)
+            context.stroke()
+
+        if self._highlight_col is not None and self._highlight_row is not None:
+            self._highlight_rectangles(
+                context,
+                self._highlight_row,
+                self._highlight_col
+            )
+
+        context.restore()
+
+
+class OldCrucipixelGrid(Widget):
+
     SELECTION_FREE = 0
     SELECTION_LINE = 1
     SELECTION_RECTANGLE = 2
@@ -50,7 +247,7 @@ class CrucipixelGrid(Widget):
 
         self.is_mouse_selection_on = False
         self.is_keyboard_selection_on = False
-        
+
         self.input_function_map = {"left": "selected",
                                    "right": "empty",
                                    "middle": "default"}
@@ -61,7 +258,7 @@ class CrucipixelGrid(Widget):
         self.input_selection_style_map = {"1": CrucipixelGrid.SELECTION_FREE,
                                           "2": CrucipixelGrid.SELECTION_LINE,
                                           "3": CrucipixelGrid.SELECTION_RECTANGLE}
-        
+
         self.selection_style = CrucipixelGrid.SELECTION_RECTANGLE
 
         self.set_translate(start.x, start.y)
@@ -105,7 +302,7 @@ class CrucipixelGrid(Widget):
             print(name, value)
 
         self.register_signal("select_color", handle_select_color)
-    
+
     @property
     def _selected_function(self):
         return self._selected_function_property
@@ -114,7 +311,7 @@ class CrucipixelGrid(Widget):
     def _selected_function(self,value):
         self._selected_function_property = value
         self._selected_core_function_property = self._function_to_crucipixel_cell(value)
-        
+
     @property
     def _selected_core_function(self):
         return self._selected_core_function_property
@@ -127,15 +324,15 @@ class CrucipixelGrid(Widget):
     @property
     def _total_height(self):
         return self.number_of_rows * self.cell_height
-    
+
     @property
     def _total_width(self):
         return self.number_of_cols * self.cell_width
-    
+
     @property
     def core_crucipixel(self):
         return self._core_crucipixel
-    
+
     @core_crucipixel.setter
     def core_crucipixel(self, value: core.Crucipixel):
         self._core_crucipixel = value
@@ -155,7 +352,7 @@ class CrucipixelGrid(Widget):
             return "default"
         else:
             raise NameError("No known cell value {}".format(cell))
-    
+
     def _function_to_crucipixel_cell(self,function):
         if function == "selected":
             return core.Crucipixel.MAIN_SELECTED
@@ -163,7 +360,7 @@ class CrucipixelGrid(Widget):
             return core.Crucipixel.EMPTY
         elif function == "default":
             return core.Crucipixel.DEFAULT
-    
+
     def update_status_from_crucipixel(self):
         for i in range(self.core_crucipixel.rows):
             for j in range(self.core_crucipixel.cols):
@@ -172,15 +369,15 @@ class CrucipixelGrid(Widget):
                         self._core_crucipixel[i,j]
                     )
                 self.invalidate()
-    
+
     def on_draw(self, widget, context):
 
         def highlight_rectangles(row, col):
             width = self._total_width
             height = self._total_height
-            
+
             line_width = 3
-            
+
             row_rectangles = [
                 Rectangle(
                     Point(1, row * self.cell_height - line_width/2),
@@ -215,7 +412,7 @@ class CrucipixelGrid(Widget):
                                   row_rectangle.width,
                                   row_rectangle.height)
                 context.fill()
-            
+
             for col_rectangle in col_rectangles:
                 context.rectangle(col_rectangle.start.x,
                                   col_rectangle.start.y,
@@ -239,13 +436,13 @@ class CrucipixelGrid(Widget):
                               col_rectangle.width,
                               col_rectangle.height)
             context.fill()
-            context.restore() 
-            
+            context.restore()
+
         context.save()
         context.set_line_width(1)
         width = self._total_width
         height = self._total_height
-        
+
         def draw_cell(function:"cell_function",area:"Rectangle"):
             r, g, b = self._function_to_color(function)
             context.set_source_rgb(r, g, b)
@@ -269,7 +466,7 @@ class CrucipixelGrid(Widget):
                 context.line_to(area.start.x + delta_x,
                                 area.start.y + delta_y)
                 context.stroke()
-                
+
 
 #         for (k,v) in self._cell_function.items():
         for row in range(self.number_of_rows):
@@ -283,7 +480,7 @@ class CrucipixelGrid(Widget):
                 if row == 31 and col < 5:
                     pass
                 draw_cell(v, rectangle)
-                        
+
         context.set_source_rgb(0,0,0)
         context.set_line_cap(cairo.LINE_CAP_SQUARE)
         i=0
@@ -294,7 +491,7 @@ class CrucipixelGrid(Widget):
                 context.set_line_width(1)
             context.move_to(x,0)
             context.line_to(x,height)
-            context.stroke() 
+            context.stroke()
             i+=1
 
         i=0
@@ -307,18 +504,18 @@ class CrucipixelGrid(Widget):
             context.line_to(width,y)
             context.stroke()
             i+=1
-        
+
         context.move_to(0,0)
         context.line_to(-10,-10)
-        context.stroke() 
-        
+        context.stroke()
+
         if self._highlight_col is not None and\
            self._highlight_row is not None:
             highlight_rectangles(self._highlight_row,
                                  self._highlight_col)
 
         context.restore()
-    
+
     def _get_cell_id(self, pos:Point) -> Tuple[int, int]:
             cell_col = int(pos.x // self.cell_width)
             cell_row = int(pos.y // self.cell_height)
@@ -339,7 +536,7 @@ class CrucipixelGrid(Widget):
             except KeyError:
                 pass
         return False
-    
+
     def on_key_down(self, w, e):
         super().on_key_down(w,e)
         if e.key == "ctrl_l":
@@ -360,7 +557,7 @@ class CrucipixelGrid(Widget):
             self._handle_key_selection_start(self._selection_keys[e.key])
             self.invalidate()
         return False
-    
+
     def _handle_key_selection_start(self, function):
         if self.is_mouse_selection_on:
             self._selection_end()
@@ -374,7 +571,7 @@ class CrucipixelGrid(Widget):
             row = self._highlight_row
         start_point = Point(col, row)
         self._selection_start(start_point, function)
-    
+
     def _handle_key_selection_move(self, direction):
         col = self._highlight_col if self._highlight_col is not None else 0
         row = self._highlight_row if self._highlight_row is not None else 0
@@ -383,7 +580,7 @@ class CrucipixelGrid(Widget):
     def _handle_key_selection_end(self):
         self._selection_end()
 
-    
+
     def _handle_hover_movement(self,direction:"str"):
         self.broadcast_lw_signal("debug_text",direction)
         def get_movement(direction):
@@ -400,13 +597,13 @@ class CrucipixelGrid(Widget):
             return movement
         movement = Point(0, 0)
         for d in direction.split("_"):
-            movement += get_movement(d) 
+            movement += get_movement(d)
         curr_row, curr_col = self._highlight_row, self._highlight_col
         if curr_row is None:
             self._highlight_row = 0
         else:
-            self._highlight_row = clamp(self._highlight_row + movement.row, 
-                                        0, 
+            self._highlight_row = clamp(self._highlight_row + movement.row,
+                                        0,
                                         self.number_of_rows-1)
         if curr_col is None:
             self._highlight_col = 0
@@ -414,7 +611,7 @@ class CrucipixelGrid(Widget):
             self._highlight_col = clamp(self._highlight_col + movement.col,
                                         0,
                                         self.number_of_cols-1)
-        
+
     def _restore_selection(self):
         for row, col, color in self._selection_backup:
             self._cell_function[row, col] = color
@@ -453,12 +650,12 @@ class CrucipixelGrid(Widget):
                 return False
             else:
                 return False
-    
+
     def on_mouse_exit(self):
         super().on_mouse_exit()
         self._highlight_col = None
         self._highlight_row = None
-        self.invalidate() 
+        self.invalidate()
 
     def _selection_move(self, selection_pos):
         if self.selection_style == CrucipixelGrid.SELECTION_FREE:
@@ -488,7 +685,7 @@ class CrucipixelGrid(Widget):
         self.highlight_hover(cell_row, cell_col)
         selection_pos = Point(cell_col, cell_row)
         if self.is_mouse_selection_on:
-            self._selection_move(selection_pos) 
+            self._selection_move(selection_pos)
         self.invalidate()
         return False
 
@@ -512,14 +709,14 @@ class CrucipixelGrid(Widget):
             self._selection_end()
         self.is_dragging = False
         return False
-    
+
     def is_point_in(self, p: Point, category=MouseEvent.UNKNOWN):
         # print("Asking if I was in", category)
         if category == MouseEvent.MOUSE_MOVE and self.is_mouse_selection_on:
             return True
         else:
             return super().is_point_in(p,category)
-    
+
     def highlight_hover(self, row,col):
         self._highlight_row = row
         self._highlight_col = col
@@ -530,15 +727,12 @@ def main() -> int:
     main_window = MainWindow(title="Prova")
     main_window.add(root)
 
-    crucipixel_scheme = parse_file_name("../data/monopattino.json")
-    crucipixel_core = core.Crucipixel(
-        len(crucipixel_scheme.rows),
-        len(crucipixel_scheme.cols),
-        crucipixel_scheme.rows,
-        crucipixel_scheme.cols
-    )
+    crucipixel_model = parse_file_name("/home/giovanni/.crucipixel/monopattino.json")
+    crucipixel_core = core.Crucipixel(crucipixel_model)
+    crucipixel_core.make_move((MoveAtom(i, i, CrucipixelCellValue.SELECTED) for i in range(5)))
+    grid = CrucipixelGrid(crucipixel_core)
 
-    grid = CrucipixelGrid(crucipixel_core, cell_width=15, cell_height=15)
+    # grid = CrucipixelGrid(crucipixel_core, cell_width=15, cell_height=15)
 
     root.set_child(grid)
 

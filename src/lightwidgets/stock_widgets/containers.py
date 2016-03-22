@@ -63,19 +63,15 @@ class Container(Widget):
         for child in reversed(list(self.list)):
             # p = Point(child.toWidgetCoords.transform_point(event.x,event.y))
             p = _transform_point(child, event)
-            try:
-                if child.is_point_in(p,category):
-                    child.mouse_is_in = True
-                    local_event = event.__copy__()
-                    local_event.x = p.x
-                    local_event.y = p.y
-                    if (callback(child))(self,local_event):
-                        return True
-                else:
-                    child.mouse_is_in = False
-            except TypeError as e:
-                print("Type error?", e)
-                return True
+            if child.is_point_in(p,category):
+                child.mouse_is_in = True
+                local_event = event.__copy__()
+                local_event.x = p.x
+                local_event.y = p.y
+                if (callback(child))(self,local_event):
+                    return True
+            else:
+                child.mouse_is_in = False
         return False
     
     def _handle_keyboard_event(self,widget,event,callback):
