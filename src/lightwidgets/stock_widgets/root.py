@@ -131,7 +131,7 @@ class Root(Gtk.DrawingArea):
     
     def invalidate(self):
         self.queue_draw()
-    
+
     def register_signal_for_child(self,signal_name,widget):
         try:
             self._lw_signals[signal_name].append(widget)

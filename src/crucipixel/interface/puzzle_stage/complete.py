@@ -67,6 +67,14 @@ class CompleteCrucipixel(UncheckedContainer):
         self.scale(self._current_scale.x,self._current_scale.y)
         self.invalidate()
 
+    @property
+    def is_destroyed(self) -> bool:
+        return self.grid.is_destroyed
+
+    @is_destroyed.setter
+    def is_destroyed(self, value: bool):
+        self.grid.is_destroyed = value
+
     def on_key_down(self, w, e):
         if e.key == "=" or e.key == "+":
             self.zoom_in()
@@ -235,7 +243,18 @@ class PuzzleScreen(UncheckedContainer):
 
     def set_quit_button_callback(self, value):
         if self.buttons is not None:
-            self.buttons.on_quit_action = value
+            def on_quit_action():
+                self.is_destroyed = True
+                value()
+            self.buttons.on_quit_action = on_quit_action
+
+    @property
+    def is_destroyed(self) -> bool:
+        return self.crucipixel.is_destroyed
+
+    @is_destroyed.setter
+    def is_destroyed(self, value: bool):
+        self.crucipixel.is_destroyed = value
 
 
 def main() -> int:

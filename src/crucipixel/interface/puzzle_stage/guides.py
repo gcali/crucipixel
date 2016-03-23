@@ -101,7 +101,7 @@ class _GuideLine(Widget):
     def __init__(self, elements: List[int],
                  orientation: Orientation, line_thickness: int,
                  font_size: int, max_size: int = None,
-                 element_distance: int=10, line_distance: int=2,
+                 element_distance: int=10, line_distance: int=1.8,
                  **kwargs):
         super().__init__(**kwargs)
 

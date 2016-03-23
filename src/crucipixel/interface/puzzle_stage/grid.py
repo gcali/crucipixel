@@ -7,6 +7,7 @@ from time import sleep
 from typing import Tuple, Iterable
 
 import cairo
+from gi.repository import GLib
 
 from crucipixel.data.crucipixel_instance import CrucipixelCellValue, MoveAtom
 from crucipixel.data.json_parser import parse_file_name
@@ -38,6 +39,12 @@ class CrucipixelGrid(Widget):
             CrucipixelCellValue.SELECTED: global_constants._start_selected
         }
 
+        self.mouse_button_to_crucipixel_cell_value = {
+            "left": CrucipixelCellValue.SELECTED,
+            "right": CrucipixelCellValue.EMPTY,
+            "middle": CrucipixelCellValue.DEFAULT
+        }
+
         self._should_highlight = False
         self._highlight_row = None
         self._highlight_col = None
@@ -46,6 +53,12 @@ class CrucipixelGrid(Widget):
         self._selection_start_point = None
         self._selection_end_point = None
         self._selection_rectangle = None
+        self.is_destroyed = False
+
+        def timeout_function() -> bool:
+            self.invalidate()
+            return not self.is_destroyed
+        GLib.timeout_add(30, timeout_function)
 
     @property
     def _total_height(self) -> int:
@@ -245,18 +258,18 @@ class CrucipixelGrid(Widget):
                clamp(col, 0, self.number_of_cols)
 
     def on_mouse_move(self, widget: Widget, event: MouseEvent) -> bool:
-        if self.is_point_in(event):
-            row, col = self._point_to_row_col(event)
-            self.highlight_row_col(row, col)
-            if self._selection_start_point is not None:
-                self._move_selection(row, col)
-            self.invalidate()
+        row, col = self._point_to_row_col(event)
+        self.highlight_row_col(row, col)
+        if self._selection_start_point is not None:
+            self._move_selection(row, col)
+        # self.invalidate()
         return False
 
     def on_mouse_down(self, widget: Widget, event: MouseEvent) -> bool:
         row, col = self._point_to_row_col(event)
-        self._start_selection(CrucipixelCellValue.SELECTED, row, col)
-        self.invalidate()
+        value = self.mouse_button_to_crucipixel_cell_value[event.button]
+        self._start_selection(value, row, col)
+        # self.invalidate()
         return True
 
     def on_mouse_up(self, widget: "Widget", event: MouseEvent) -> bool:
@@ -307,7 +320,6 @@ class CrucipixelGrid(Widget):
 
     def on_mouse_exit(self) -> bool:
         self._should_highlight = False
-        self.invalidate()
         return False
 
     def is_point_in(self,p: Point ,category=MouseEvent.UNKNOWN) -> bool:
@@ -317,10 +329,8 @@ class CrucipixelGrid(Widget):
                 return True
         return super().is_point_in(p, category)
 
-
     def on_mouse_enter(self) -> bool:
         self._should_highlight = True
-        self.invalidate()
         return False
 
 
@@ -751,7 +761,7 @@ class OldCrucipixelGrid(Widget):
             selected_function = self.input_function_map[e.button]
             self.is_mouse_selection_on = True
             self._selection_start(start_point, selected_function)
-            self.invalidate()
+            # self.invalidate()
             return True
         else:
             if self.should_drag or\
@@ -796,7 +806,7 @@ class OldCrucipixelGrid(Widget):
         selection_pos = Point(cell_col, cell_row)
         if self.is_mouse_selection_on:
             self._selection_move(selection_pos)
-        self.invalidate()
+        # self.invalidate()
         return False
 
     def _selection_end(self):
