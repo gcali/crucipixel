@@ -56,6 +56,7 @@ def parse_string(s: str) -> CrucipixelCompleteModel:
 def parse_file_name(file_name: str) -> CrucipixelCompleteModel:
     with open(file_name, 'r') as f:
         parsed = parse_file(f)
+        parsed.file_name_complete = file_name
         return parsed
 
 

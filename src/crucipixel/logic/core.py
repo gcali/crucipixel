@@ -8,6 +8,8 @@ from typing import Iterable
 
 from crucipixel.data.complete_model import CrucipixelCompleteModel
 from crucipixel.data.crucipixel_instance import MoveAtom, CrucipixelCellValue
+from crucipixel.data.json_parser import parse_file_name
+from crucipixel.data.storage import save_model
 from crucipixel.interface.puzzle_stage.guides import Orientation
 
 
@@ -19,7 +21,13 @@ class Crucipixel:
         self.scheme = model.scheme
         if index >= len(model.instances):
             index = len(model.instances) - 1
+        self.index = index
         self.crucipixel_instance, self.guides_instance = model.instances[index]
+
+        self.on_won_change_callbacks_list = []
+
+        self._is_won = False
+        self._check_if_won()
 
     @property
     def number_of_rows(self) -> int:
@@ -30,10 +38,17 @@ class Crucipixel:
         return len(self.scheme.cols)
 
     def make_move(self, atoms: Iterable[MoveAtom]):
-        self.crucipixel_instance.make_move(atoms)
+        """
+        Commits a unit of moves to the instance of the crucipixel
 
-    def undo_move(self):
-        self.crucipixel_instance.undo_last_move()
+        Args:
+            atoms: a sequence of moves, interpreted as a single unit
+        """
+        self.crucipixel_instance.make_move(atoms)
+        self._check_if_won()
+
+    def undo_move(self) -> Iterable[MoveAtom]:
+        return self.crucipixel_instance.undo_last_move()
 
     def get_row_col_value(self, row: int, col: int) -> CrucipixelCellValue:
         return self.crucipixel_instance.get_row_col_value(row, col)
@@ -84,8 +99,7 @@ class Crucipixel:
         for original, custom in zip_longest(guide, guide_from_line):
             if original != custom:
                 return True
-            else:
-                return False
+        return False
 
     def is_line_done(self, orientation: Orientation, line: int) -> bool:
         return not self.is_line_wrong(orientation, line)
@@ -97,9 +111,44 @@ class Crucipixel:
         else:
             return True
 
+    @property
+    def is_won(self) -> bool:
+        return self._is_won
+
+    @is_won.setter
+    def is_won(self, value: bool):
+        old_value = self._is_won
+        self._is_won = value
+        if value != old_value:
+            self.on_won_change_callbacks_list = [
+                callback for callback in self.on_won_change_callbacks_list
+                if not callback(value)
+            ]
+            for callback in self.on_won_change_callbacks_list:
+                callback(value)
+
+    def _check_if_won(self):
+        for line in range(self.number_of_rows):
+            if (not self.is_line_full(Orientation.HORIZONTAL, line)) or\
+                    self.is_line_wrong(Orientation.HORIZONTAL, line):
+                self.is_won = False
+                return
+        for col in range(self.number_of_cols):
+            if (not self.is_line_full(Orientation.VERTICAL, line)) or \
+                    self.is_line_wrong(Orientation.VERTICAL, line):
+                self.is_won = False
+                return
+        self.is_won = True
+
     def toggle_guide_cancelled(self, orientation: Orientation, line: int,
                                element: int):
         self.guides_instance.toggle_cancelled(orientation, line, element)
+
+    def save(self):
+        save_model(self._model)
+
+    def load(self):
+        self.__init__(parse_file_name(self._model.file_name_complete))
 
 
 # class Crucipixel:

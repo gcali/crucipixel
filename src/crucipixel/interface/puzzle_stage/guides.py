@@ -20,6 +20,12 @@ from lightwidgets.stock_widgets.root import Root, MainWindow
 from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.support import rgb_to_gtk
 
+class GuideStatus(Enum):
+
+    DONE = 0
+    WRONG = 1
+    DEFAULT = 2
+
 class GuideCell:
     
     def __init__(self, coordinates: Tuple[int, int],
@@ -120,13 +126,20 @@ class _GuideLine(Widget):
         self.line_extension = 0
         self._selected_cell = None
 
-    def set_done(self, is_it: bool):
+    def set_done(self):
         for e in self._elements:
-            e.is_done = is_it
+            e.is_done = True
+            e.is_wrong = False
 
-    def set_wrong(self, is_it: bool):
+    def set_wrong(self):
         for e in self._elements:
-            e.is_wrong = is_it
+            e.is_wrong = True
+            e.is_done = False
+
+    def set_default(self):
+        for e in self._elements:
+            e.is_wrong = False
+            e.is_done = False
 
     def set_cancelled(self, is_it: bool, index: int):
         self._elements[index].is_cancelled = is_it
@@ -291,12 +304,6 @@ class BetterGuide(UncheckedContainer):
         for line in self._lines:
             self.add(line)
 
-        def change_status(index: int, status: str, value: bool):
-            print("changin status of", index)
-            if status == "wrong":
-                self._lines[index].set_wrong(value)
-            elif status == "done":
-                self._lines[index].set_done(value)
 
         def activate_status(status_line: List[Tuple[str, int]]):
             for line in self._lines:
@@ -310,6 +317,14 @@ class BetterGuide(UncheckedContainer):
             self.register_signal("activate-hor-status", activate_status)
         else:
             self.register_signal("activate-ver-status", activate_status)
+
+    def change_status(self, index: int, status: GuideStatus):
+        if status == GuideStatus.WRONG:
+            self._lines[index].set_wrong()
+        elif status == GuideStatus.DONE:
+            self._lines[index].set_done()
+        else:
+            self._lines[index].set_default()
 
     def on_draw(self, widget: Widget, context: cairo.Context):
 

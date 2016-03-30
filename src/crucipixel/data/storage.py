@@ -4,7 +4,12 @@ from typing import List
 from crucipixel.data import json_parser
 from crucipixel.data.complete_model import CrucipixelCompleteModel
 from crucipixel.data.crucipixel_scheme import CrucipixelScheme
+from crucipixel.data.json_parser import encode_model
 from crucipixel.options import Options
+
+
+class UnknownPathException(Exception):
+    pass
 
 
 def assure_path(path: str) -> str:
@@ -32,6 +37,17 @@ def get_models(options: Options = None) -> List[CrucipixelCompleteModel]:
     file_names = [name for name in glob.iglob(path + os.sep + "*.json")]
 
     return [json_parser.parse_file_name(name) for name in file_names]
+
+
+def save_model(model: CrucipixelCompleteModel, path: str = None):
+    if path is None:
+        if model.file_name_complete is None:
+            raise UnknownPathException
+        else:
+            path = model.file_name_complete
+
+    with open(path, "w") as f:
+        print(encode_model(model), file=f)
 
 
 def main() -> int:

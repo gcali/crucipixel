@@ -11,7 +11,7 @@ import itertools
 from crucipixel.data.crucipixel_scheme import CrucipixelScheme
 from crucipixel.data.json_parser import parse_file_name
 from crucipixel.interface import global_constants
-from lightwidgets.events import MouseEvent
+from lightwidgets.events import MouseEvent, MouseButton
 from lightwidgets.geometry import Rectangle, Point
 from lightwidgets.stock_widgets.arrow import Arrow
 from lightwidgets.stock_widgets.buttons import Button, BetterButton
@@ -558,7 +558,7 @@ class TableContents(Widget):
         context.stroke()
 
         if self._to_highlight is not None:
-            r, g, b = global_constants._highlight
+            r, g, b = global_constants.highlight
             context.set_source_rgba(r, g, b, .6)
             index = self._to_highlight
             base = start_y + table_extents.get_height_up_to(skip, index) + self.margin
@@ -599,7 +599,7 @@ class ChooserTable(UncheckedContainer):
     def set_contents_callback(self, callback: Callable[[int], None]) -> None:
         self.contents.set_selected_callback(callback)
 
-    def set_back_callback(self, callback: Callable[[], None]) -> None:
+    def set_back_callback(self, callback: Callable[[MouseButton], None]) -> None:
         self.back_button.on_click_action = callback
 
     @property

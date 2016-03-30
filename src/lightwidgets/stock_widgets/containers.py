@@ -3,11 +3,14 @@ Created on May 20, 2015
 
 @author: giovanni
 '''
+from typing import Callable
+
 import cairo
 
 from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.geometry import Point, Rectangle
-from lightwidgets.events import MouseEvent
+from lightwidgets.events import MouseEvent, KeyboardEvent, MouseEventCategory
+
 
 def _transform_point(widget: Widget, point: Point):
     return Point(widget.toWidgetCoords.transform_point(point.x, point.y))
@@ -38,15 +41,16 @@ class Container(Widget):
 
     def on_draw(self, widget: Widget, context: cairo.Context):
         for child in self.list:
-            context.save()
-            context.transform(child.fromWidgetCoords)
-            if child.is_clip_set():
-                rectangle = child.clip_rectangle
-                context.rectangle(rectangle.start.x,rectangle.start.y,
-                                  rectangle.width,rectangle.height)
-                context.clip() 
-            child.on_draw(self,context)
-            context.restore()
+            if child.visible:
+                context.save()
+                context.transform(child.fromWidgetCoords)
+                if child.is_clip_set():
+                    rectangle = child.clip_rectangle
+                    context.rectangle(rectangle.start.x,rectangle.start.y,
+                                      rectangle.width,rectangle.height)
+                    context.clip()
+                child.on_draw(self,context)
+                context.restore()
     
     def update_min_size(self, value):
         self.min_size = value
@@ -59,19 +63,29 @@ class Container(Widget):
             raise AttributeError()
 
 
-    def _handle_mouse_event(self,widget,event,callback,category):
+    def _handle_mouse_event(
+            self,
+            widget: Widget,
+            event: MouseEvent,
+            callback: Callable[[Widget],
+            Callable[[Widget, MouseEvent], bool]],
+            category: MouseEventCategory
+    ):
         for child in reversed(list(self.list)):
-            # p = Point(child.toWidgetCoords.transform_point(event.x,event.y))
-            p = _transform_point(child, event)
-            if child.is_point_in(p,category):
-                child.mouse_is_in = True
-                local_event = event.__copy__()
-                local_event.x = p.x
-                local_event.y = p.y
-                if (callback(child))(self,local_event):
-                    return True
-            else:
-                child.mouse_is_in = False
+            if child.visible:
+                # p = Point(child.toWidgetCoords.transform_point(event.x,event.y))
+                p = _transform_point(child, event)
+                was_in = child.is_point_in(p, category)
+                if category == MouseEventCategory.MOUSE_UP or \
+                        was_in:
+                    child.mouse_is_in = was_in
+                    local_event = event.__copy__()
+                    local_event.x = p.x
+                    local_event.y = p.y
+                    if (callback(child))(self, local_event):
+                        return True
+                else:
+                    child.mouse_is_in = False
         return False
     
     def _handle_keyboard_event(self,widget,event,callback):
@@ -80,15 +94,23 @@ class Container(Widget):
                 return True
         return False
     
-    def on_mouse_down(self, w, e):
+    def on_mouse_down(self, widget: Widget, event: MouseEvent):
+        super().on_mouse_down(widget, event)
         def take_on_mouse_down(w):
             return w.on_mouse_down
-        return self._handle_mouse_event(w,e,take_on_mouse_down,MouseEvent.MOUSE_DOWN)
+        return self._handle_mouse_event(widget,
+                                        event,
+                                        take_on_mouse_down,
+                                        MouseEvent.MOUSE_DOWN)
     
-    def on_mouse_up(self, w, e):
+    def on_mouse_up(self, widget: Widget, event: MouseEvent):
+        super().on_mouse_up(widget, event)
         def take_on_mouse_up(w):
             return w.on_mouse_up
-        return self._handle_mouse_event(w,e,take_on_mouse_up,MouseEvent.MOUSE_UP)
+        return self._handle_mouse_event(widget,
+                                        event,
+                                        take_on_mouse_up,
+                                        MouseEvent.MOUSE_UP)
 
     def on_mouse_move(self, w, e):
         super().on_mouse_move(w,e)
@@ -100,15 +122,15 @@ class Container(Widget):
         for child in reversed(list(self.list)):
             child.mouse_is_in = False
     
-    def on_key_down(self, w, e):
+    def on_key_down(self, widget: Widget, event: KeyboardEvent) -> bool:
         def take_on_key_down(w):
             return w.on_key_down
-        return self._handle_keyboard_event(self, e, take_on_key_down)
+        return self._handle_keyboard_event(self, event, take_on_key_down)
 
-    def on_key_up(self, w, e):
+    def on_key_up(self, widget: Widget, event: KeyboardEvent) -> bool:
         def take_on_key_up(w):
             return w.on_key_up
-        return self._handle_keyboard_event(self, e, take_on_key_up)
+        return self._handle_keyboard_event(self, event, take_on_key_up)
     
     def register_signal_for_child(self, signal_name:"str", widget:"Widget"):
         def handle_child(*args):
@@ -171,18 +193,12 @@ class UncheckedContainer(Container):
         widget.father = self
         try:
             self.min_size = widget.min_size
-            print("New min size!", widget.min_size)
         except AttributeError:
             pass
         return widget
     
     def remove_obj(self, widget):
-        index = None
-        for (pos,(_,w)) in enumerate(self._widget_list):
-            if w == widget:
-                index = pos
-                break
-        if index is None:
-            raise KeyError("{} not found".format(str(widget)))
-        del(self._widget_list[index])
+        self._widget_list = [(top, list_widget)
+                             for (top, list_widget) in self._widget_list
+                             if list_widget != widget]
     

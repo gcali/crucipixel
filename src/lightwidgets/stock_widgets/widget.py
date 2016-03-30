@@ -3,11 +3,14 @@ Created on May 20, 2015
 
 @author: giovanni
 '''
-from typing import Callable
+from numbers import Number
+from typing import Callable, Tuple
 
 import cairo
 from lightwidgets.geometry import Point, Rectangle
-from lightwidgets.events import MouseEvent
+from lightwidgets.events import MouseEvent, KeyboardEvent, MouseEventCategory, \
+    MouseButton
+
 
 class Widget:
     
@@ -29,6 +32,10 @@ class Widget:
         self._clip_width = Widget.NO_CLIP
         self._clip_height = Widget.NO_CLIP
         self._mouse_is_in = False
+
+        self.__prepare_to_click = None
+
+        self.visible = True
 
         if min_size is not None:
             self._min_size = min_size
@@ -93,7 +100,7 @@ class Widget:
         self._father = value
         
     @property
-    def container_size(self):
+    def container_size(self) -> Tuple[int, int]:
         if self.father is None:
             raise AttributeError
         size = self.father.container_size
@@ -137,6 +144,11 @@ class Widget:
         self._fromScale.scale(x,y)
         self._toScale.scale(1/x,1/y)
 
+    def set_scale(self, x: Number, y: Number):
+        self._fromScale = cairo.Matrix()
+        self._toScale = cairo.Matrix()
+        self.scale(x, y)
+
     def is_clip_set(self):
         return not (self._clip_start is None)
     
@@ -172,31 +184,38 @@ class Widget:
         return True
     
     def on_mouse_move(self, widget: "Widget", event: MouseEvent) -> bool:
-        self._mouse_was_in = True
         return False
 
     def on_mouse_down(self, widget: "Widget", event: MouseEvent) -> bool:
+        self.__prepare_to_click = event.button
         return False
     
     def on_mouse_up(self, widget: "Widget", event: MouseEvent) -> bool:
+        if self.__prepare_to_click == event.button:
+            if self.is_point_in(event):
+                self.on_click(widget, event.button)
+            self.__prepare_to_click = None
         return False
     
-    def on_key_down(self,w,e) -> bool:
+    def on_key_down(self, widget: "Widget", event: KeyboardEvent) -> bool:
+        return False
+
+    def on_key_up(self, widget: "Widget", event: KeyboardEvent) -> bool:
         return False
     
-    def on_key_up(self,w,e) -> bool:
-        return False
-    
-    def on_resize(self,new_father_dim) -> None:
+    def on_resize(self, new_father_dim) -> None:
         return
     
-    def is_point_in(self,p: Point ,category=MouseEvent.UNKNOWN) -> bool:
-        if category == MouseEvent.MOUSE_UP:
-            return True
-        elif not self.is_clip_set():
+    def is_point_in(self,p: Point, category=MouseEvent.UNKNOWN) -> bool:
+        # if category == MouseEvent.MOUSE_UP:
+        #     return True
+        if not self.is_clip_set():
             return False
         else:
             return self.clip_rectangle.is_point_in(p)
+
+    def on_click(self, widget: "Widget", button: MouseButton) -> None:
+        pass
     
     def invalidate(self):
         if self.father:

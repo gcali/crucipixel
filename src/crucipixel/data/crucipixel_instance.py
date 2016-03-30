@@ -61,7 +61,7 @@ class CrucipixelInstance:
             'rows': self.rows,
             'cols': self.cols,
             'status': [
-                [self.status[row][col] for col in range(self.cols)]
+                [self.status[row][col].value for col in range(self.cols)]
                 for row in range(self.rows)
             ],
             'moves': [
@@ -76,9 +76,12 @@ class CrucipixelInstance:
             [MoveAtom.from_json_object(atom_json) for atom_json in move]
             for move in o['moves']
         ]
-        status = o['status']
         rows = o['rows']
         cols = o['cols']
+        status = [
+            [CrucipixelCellValue(o['status'][row][col]) for col in range(rows)]
+            for row in range(rows)
+        ]
 
         return CrucipixelInstance(rows, cols, status, moves)
 
@@ -86,19 +89,28 @@ class CrucipixelInstance:
         return self.status[row][col]
 
     def make_move(self, atoms: Iterable[MoveAtom]):
+        """
+        Commits a unit of moves to the instance of the crucipixel
+
+        Args:
+            atoms: a sequence of moves, interpreted as a single unit
+        """
         move = []
         for atom in atoms:
-            # atom._back_value = self.status[atom.row][atom.col]
             move.append(MoveAtom(
                 atom.row, atom.col, self.status[atom.row][atom.col]
             ))
             self.status[atom.row][atom.col] = atom.value
         self.moves.append(move)
 
-    def undo_last_move(self):
-        last_move = self.moves.pop()
-        for atom in reversed(last_move):
-            self.status[atom.row][atom.col] = atom.value
+    def undo_last_move(self) -> Iterable[MoveAtom]:
+        try:
+            last_move = self.moves.pop()
+            for atom in reversed(last_move):
+                self.status[atom.row][atom.col] = atom.value
+            return reversed(last_move)
+        except IndexError:
+            pass
 
     def __str__(self):
         return str(self.status)

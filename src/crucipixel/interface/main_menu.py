@@ -8,6 +8,7 @@ from typing import Callable, List
 
 import cairo
 
+from lightwidgets.events import MouseButton
 from lightwidgets.geometry import Point
 from lightwidgets.stock_widgets.containers import UncheckedContainer
 from lightwidgets.stock_widgets.buttons import Button, BetterButton
@@ -18,13 +19,15 @@ from lightwidgets.stock_widgets.widget import Widget
 class BetterMainMenu(UncheckedContainer):
 
     def __init__(self,
+                 title: str,
                  labels: List[str],
-                 callbacks: List[Callable[[], None]],
+                 callbacks: List[Callable[[MouseButton], None]],
                  font_size: int=20,
                  distance: int=20,
                  **kwargs):
         self.done = False
         super().__init__(**kwargs)
+        self.title = title
         self.distance = distance
         self._buttons = [
             BetterButton(
@@ -40,7 +43,7 @@ class BetterMainMenu(UncheckedContainer):
         for b, c in zip(self._buttons, callbacks):
             b.on_click_action = c
 
-    def set_callback(self, index: int, callback: Callable[[], None]):
+    def set_callback(self, index: int, callback: Callable[[MouseButton], None]):
         self._buttons[index].on_click_action = callback
         print("Set for", index)
 
@@ -48,25 +51,38 @@ class BetterMainMenu(UncheckedContainer):
         self.invalidate()
 
     def on_draw(self, widget: Widget, context: cairo.Context):
+
+
         for b in self._buttons:
             b.set_shape_from_context(context)
 
         shapes = [b.shape for b in self._buttons]
 
+        context.save()
+        context.select_font_face("", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        xb, yb, w, h, xa, ya = context.text_extents(self.title)
+
         width = max(shape.width for shape in shapes)
-        height = 0
-        for b in self._buttons:
-            height += b.shape.height + self.distance
-
-        self.min_size = width + 2 * self.distance, height + self.distance
-
+        width = max(width, xa)
         container_width = self.container_size[0]
         translation = Point(0, self.distance)
         if container_width > width:
             translation += Point((container_width)/2, 0)
         else:
             translation += Point(width/2, 0)
+
+        context.move_to(translation.x - xa/2, h + self.distance)
+        context.show_text(self.title)
+        context.restore()
+
+        height = h + self.distance * 3
+        for b in self._buttons:
+            height += b.shape.height + self.distance
+
+        self.min_size = width + 2 * self.distance, height + self.distance
+
         start_point = context.get_current_point()
+        translation += Point(0, h + self.distance * 2)
         context.translate(translation.x, translation.y)
 
         distance_offset = Point(0, self.distance)

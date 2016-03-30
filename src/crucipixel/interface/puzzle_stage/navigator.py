@@ -1,10 +1,18 @@
+from enum import Enum, unique
+
 from crucipixel.interface import global_constants
 from lightwidgets.events import MouseEvent
 from lightwidgets.geometry import Rectangle, Point
 from lightwidgets.stock_widgets.arrow import Arrow
 from lightwidgets.stock_widgets.containers import UncheckedContainer
 from lightwidgets.stock_widgets.root import MainWindow, Root
-from lightwidgets.stock_widgets.widget import Widget
+
+@unique
+class Direction(Enum):
+    UP = 0
+    DOWN = 1
+    LEFT = 2
+    RIGHT = 3
 
 
 class Navigator(UncheckedContainer):
@@ -13,7 +21,7 @@ class Navigator(UncheckedContainer):
         super().__init__()
         base_size = side
         height = protrusion
-        colour = global_constants._start_selected
+        colour = global_constants.start_selected
         arrow_up = Arrow(base_size, height, Arrow.UP, colour)
         arrow_down = Arrow(base_size, height, Arrow.DOWN, colour)
         arrow_left = Arrow(base_size, height, Arrow.LEFT, colour)
@@ -36,9 +44,9 @@ class Navigator(UncheckedContainer):
 
         self._should_pass_move = False
 
-    def on_mouse_up(self, w, e):
+    def on_mouse_up(self, widget, event):
         self._should_pass_move = False
-        super().on_mouse_up(w, e)
+        super().on_mouse_up(widget, event)
         return False
 
     def on_mouse_enter(self) -> bool:
@@ -55,8 +63,8 @@ class Navigator(UncheckedContainer):
         super().on_mouse_move(w, e)
         return False
 
-    def on_mouse_down(self, w, e):
-        super().on_mouse_down(w, e)
+    def on_mouse_down(self, widget, event):
+        super().on_mouse_down(widget, event)
         return True
 
     @property
@@ -82,7 +90,7 @@ class Navigator(UncheckedContainer):
         context.rectangle(start.x,start.y,width,height)
         context.set_source_rgb(0,0,0)
         context.stroke_preserve()
-        context.set_source_rgb(*global_constants._background)
+        context.set_source_rgb(*global_constants.background)
         context.fill()
         context.restore()
 

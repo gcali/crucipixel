@@ -3,7 +3,7 @@ Created on May 20, 2015
 
 @author: giovanni
 '''
-from typing import Tuple
+from typing import Tuple, Callable
 
 import cairo
 
@@ -12,7 +12,12 @@ from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.geometry import Point
 from lightwidgets.stock_widgets.geometrical import DrawableRoundedRectangle
 from lightwidgets.support import rgb_to_gtk
-from lightwidgets.events import MouseEvent
+from lightwidgets.events import MouseEvent, MouseButton
+
+
+def click_left_button_wrapper(action: Callable[[], None]) \
+        -> Callable[[MouseButton], None]:
+    return lambda x: (action() if x == MouseButton.LEFT else None)
 
 
 class BetterButton(Widget):
@@ -44,20 +49,14 @@ class BetterButton(Widget):
     def is_point_in(self,p: Point, category=MouseEvent.UNKNOWN):
         if self.shape is None:
             return False
-        elif category == MouseEvent.MOUSE_UP and self._mouse_up_interested:
-            return True
+        # elif category == MouseEvent.MOUSE_UP and self._mouse_up_interested:
+        #     return True
         else:
             return self.shape.is_point_in(p)
 
-    def on_mouse_down(self, widget: "Widget", event: MouseEvent):
-        self._mouse_up_interested = True
-        return True
-
-    def on_mouse_up(self, widget: "Widget", event: MouseEvent):
+    def on_click(self, widget: "Widget", button: MouseButton):
         if self.on_click_action is not None:
-            self.on_click_action()
-        self._mouse_up_interested = False
-        return super().on_mouse_up(widget, event)
+            self.on_click_action(button)
 
     def set_shape_from_context(self, context: cairo.Context):
         label = self.label
@@ -92,11 +91,14 @@ class BetterButton(Widget):
 
         context.set_source_rgb(*self.background_color)
         shape.draw_on_context(context)
-        context.fill()
+        context.fill_preserve()
+
+        context.set_line_width(1)
+        context.set_source_rgb(*self.label_color)
+        context.stroke()
 
         context.move_to(start.x + padding,
                         start.y + padding + h)
-        context.set_source_rgb(*self.label_color)
         context.show_text(label)
 
 
@@ -104,7 +106,7 @@ def main():
     main_window = MainWindow(title="button")
     root = Root(100, 100)
     root.set_main_window(main_window)
-    button = BetterButton("ciao", 20)
+    button = BetterButton("", 20)
     button.translate(50, 50)
     button.on_click_action = lambda: print("Hi!")
     root.set_child(button)

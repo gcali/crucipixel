@@ -3,32 +3,40 @@ Created on May 19, 2015
 
 @author: giovanni
 '''
+import copy
+
 import cairo
 
 from crucipixel.data.json_parser import parse_file_name
 from crucipixel.interface.puzzle_stage.buttons import GridButtons
 from crucipixel.interface.puzzle_stage.navigator import Navigator
 from crucipixel.logic import core
+from lightwidgets.events import KeyboardEvent, MouseEvent, MouseButton
 from lightwidgets.geometry import Point
 from gi.repository import Gdk
 
+from lightwidgets.stock_widgets.buttons import click_left_button_wrapper
+from lightwidgets.stock_widgets.overlay import TextOverlay
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.support import Bunch
 from lightwidgets.animator import AccMovement
 from crucipixel.interface import global_constants
 from crucipixel.interface.puzzle_stage.guides import Guides, BetterGuide, \
-    Orientation
-from crucipixel.interface.puzzle_stage.grid import CrucipixelGrid
-from crucipixel.interface.puzzle_stage.selector import Selector
+    Orientation, GuideStatus
+from crucipixel.interface.puzzle_stage.grid import CrucipixelGrid, \
+    CrucipixelGridWonWrapper
+from crucipixel.interface.puzzle_stage.selector import Selector, BetterSelector
 from lightwidgets.stock_widgets.containers import UncheckedContainer
+
 
 def gdk_color(*args):
     if len(args) == 1:
-        r,g,b = args[0]
+        r, g, b = args[0]
     else:
-        r,g,b = args
+        r, g, b = args
     return Gdk.Color.from_floats(r, g, b) 
+
 
 class CompleteCrucipixel(UncheckedContainer):
 
@@ -43,6 +51,12 @@ class CompleteCrucipixel(UncheckedContainer):
             cell_size=self.cell_size,
             orientation=Orientation.VERTICAL
         )
+        # def on_won_change(value: bool):
+        #     self.horizontal_guide.visible = not value
+        #     self.vertical_guide.visible = not value
+        # crucipixel.on_won_change_callbacks_list.append(on_won_change)
+        # self.horizontal_guide.visible = not crucipixel.is_won
+        # self.vertical_guide.visible = not crucipixel.is_won
         self.add(self.horizontal_guide)
         self.add(self.vertical_guide)
 
@@ -59,13 +73,38 @@ class CompleteCrucipixel(UncheckedContainer):
         self.add(self.grid)
 
         self._init_guides(crucipixel)
+
+        def update_guide(orientation: Orientation, index: int,
+                         status: GuideStatus):
+            if orientation == Orientation.HORIZONTAL:
+                guide = self.horizontal_guide
+            else:
+                guide = self.vertical_guide
+            guide.change_status(index, status)
+
+        self.grid.on_guide_update = update_guide
+        self.grid.refresh_guides()
+
+
         self._current_scale = Point(1, 1)
         self._direction_animations = {}
-        self._movement = dict(global_constants._global_movement_keys)
+        self._movement = dict(global_constants.global_movement_keys)
 
     def _update_scale(self):
         self.scale(self._current_scale.x,self._current_scale.y)
         self.invalidate()
+
+    def save(self):
+        self.grid.save()
+
+    def load(self):
+        self.grid.load()
+
+    def undo(self):
+        self.grid.undo()
+
+    def handle_selector(self, index: int, button: MouseButton):
+        self.grid.handle_selector(index, button)
 
     @property
     def is_destroyed(self) -> bool:
@@ -177,6 +216,7 @@ class PuzzleScreen(UncheckedContainer):
         super().__init__(*args,**kwargs)
         self.ID = "MainArea"
         self.crucipixel = None
+        self.grid = None
         self.selector = None
         self._mouse_down = False
         self._click_point = Point(0,0)
@@ -189,6 +229,44 @@ class PuzzleScreen(UncheckedContainer):
         self.start_selector()
         self.start_navigator()
         self.start_buttons()
+        self.buttons.on_save_action = click_left_button_wrapper(lambda: self.crucipixel.save())
+        self.buttons.on_load_action = click_left_button_wrapper(lambda: self.crucipixel.load())
+        self.buttons.on_undo_action = click_left_button_wrapper(lambda: self.crucipixel.undo())
+
+        def create_lambda(index):
+            return lambda button: self.crucipixel.handle_selector(index, button)
+
+        for i in range(3):
+            self.selector.set_click_action(
+                i,
+                create_lambda(i)
+            )
+
+        overlay = TextOverlay("PUZZLE SOLVED")
+
+        def overlay_action():
+            overlay.visible = False
+        overlay.on_click_action = overlay_action
+        self.add(overlay, top=-10)
+
+        def update_win_status(is_won: bool):
+            if is_won:
+                overlay.visible = True
+                self.grid.visible = True
+                self.crucipixel.visible = False
+                self.crucipixel.grid.victory_screen = True
+                self.buttons.set_edit()
+            else:
+                self.grid.visible = False
+                self.crucipixel.visible = True
+                self.crucipixel.grid.victory_screen = False
+                overlay.visible = False
+                self.buttons.set_undo()
+                print("Hi!")
+        update_win_status(crucipixel.is_won)
+        self.buttons.on_edit_action = click_left_button_wrapper(lambda: update_win_status(False))
+
+        crucipixel.on_won_change_callbacks_list.append(update_win_status)
 
     def start_buttons(self):
         self.buttons = GridButtons()
@@ -202,21 +280,27 @@ class PuzzleScreen(UncheckedContainer):
         self.add(self.navigator, top=-1)
     
     def start_selector(self,start=Point(0,0)):
-        self.selector = Selector(start=start)
+        self.selector = BetterSelector()
+        # self.selector.translate(.5, .5)
         self.selector.ID = "Selector"
-        self.add(self.selector,top=-1)
+        self.add(self.selector, top=-1)
     
     def start_crucipixel(self,crucipixel: core.Crucipixel,
                          start=Point(120,100),cell_size=20):
         self.crucipixel = CompleteCrucipixel(crucipixel, start, cell_size)
         self.crucipixel.ID="CompleteCrucipixel"
+        self.grid = CrucipixelGridWonWrapper(self.crucipixel.grid, crucipixel)
         self.add(self.crucipixel)
-    
-    def on_mouse_down(self, w, e):
-        handled = super().on_mouse_down(w, e)
+        self.add(self.grid)
+
+    def on_mouse_down(self, widget, event: MouseEvent):
+        if 'ctrl' in event.modifiers:
+            handled = False
+        else:
+            handled = super().on_mouse_down(widget, event)
         if not handled:
             self._mouse_down = True
-            self._click_point = Point(e.x,e.y)
+            self._click_point = Point(event.x, event.y)
             self._translate_vector = Point(self.crucipixel.fromWidgetCoords.transform_point(0,0))
     
     def on_mouse_move(self, w, e):
@@ -228,24 +312,26 @@ class PuzzleScreen(UncheckedContainer):
             self.invalidate()
         super().on_mouse_move(w,e)
     
-    def on_mouse_up(self,w,e):
+    def on_mouse_up(self, widget, event):
         if self._mouse_down:
             self._mouse_down = False
-        super().on_mouse_up(w,e)
+        super().on_mouse_up(widget, event)
 
     def on_draw(self, widget: Widget, context: cairo.Context):
-        navigator_width = self.navigator.width
-        buttons_width, _ = self.buttons.get_width_height(context)
+        selector_width = self.selector.width
+        self.grid.left_padding = selector_width + 10
+        buttons_width, buttons_height = self.buttons.get_width_height(context)
+        self.grid.upper_padding = buttons_height + 30
 
-        self.min_size = navigator_width + buttons_width + 10, 100
+        self.min_size = selector_width + buttons_width + 10, 100
 
         super().on_draw(widget, context)
 
     def set_quit_button_callback(self, value):
         if self.buttons is not None:
-            def on_quit_action():
+            def on_quit_action(button: MouseButton):
                 self.is_destroyed = True
-                value()
+                value(button)
             self.buttons.on_quit_action = on_quit_action
 
     @property

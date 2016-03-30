@@ -3,24 +3,30 @@ Created on May 20, 2015
 
 @author: giovanni
 '''
+# from gi.repository import Gtk
 from gi.repository import Gtk
+from gi.repository import Gdk
+# from gi.repository import Gdk
+# from gi.repository import Gdk
 from gi.repository.Gdk import EventMask
+
 from lightwidgets.events import _transform_mouse_event,\
     _transform_keyboard_event
-from gi.overrides.Gdk import Gdk
+# from gi.overrides.Gdk import Gdk
 from lightwidgets.stock_widgets.widget import Widget
+from numbers import Number
 
 class Root(Gtk.DrawingArea):
     
     def __init__(self, width=-1,height=-1,*args,**kwargs):
         super().__init__(*args, **kwargs)
         self._child = None
-        events = EventMask.BUTTON_PRESS_MASK\
-                 | EventMask.BUTTON_RELEASE_MASK\
-                 | EventMask.POINTER_MOTION_MASK\
-                 | EventMask.KEY_PRESS_MASK\
-                 | EventMask.KEY_RELEASE_MASK\
-                 | EventMask.STRUCTURE_MASK
+        events = Gdk.EventMask.BUTTON_PRESS_MASK\
+               | Gdk.EventMask.BUTTON_RELEASE_MASK\
+               | Gdk.EventMask.POINTER_MOTION_MASK\
+               | Gdk.EventMask.KEY_PRESS_MASK\
+               | Gdk.EventMask.KEY_RELEASE_MASK\
+               | Gdk.EventMask.STRUCTURE_MASK
         self.add_events(events)
         self.set_can_focus(True)
         self.connect("draw", self.on_draw)
@@ -175,4 +181,9 @@ class MainWindow(Gtk.Window):
     
     def start_main(self):
         self.show_all()
-        return Gtk.main() 
+        return Gtk.main()
+
+    def set_background_rgba(self, r: Number, g: Number, b: Number, a: Number):
+        print(Gdk.RGBA)
+        self.override_background_color(Gtk.StateFlags.NORMAL,
+                                       Gdk.RGBA(r, g, b, a))

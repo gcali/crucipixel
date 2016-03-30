@@ -21,6 +21,8 @@ class CrucipixelCompleteModel:
                 GuidesInstance())
             ]
 
+        self.file_name_complete = None
+
     def to_json_object(self) -> object:
         return {
             'scheme': self.scheme.to_json_object(),
@@ -40,3 +42,4 @@ class CrucipixelCompleteModel:
         ]
 
         return CrucipixelCompleteModel(scheme, instances)
+
