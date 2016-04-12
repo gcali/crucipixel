@@ -16,10 +16,27 @@ class Widget:
     
     NO_CLIP=None
 
+    @property
+    def shape(self) -> Rectangle:
+        if self._shape is not None:
+            return self._shape
+        elif self.father is not None:
+            return self.father.shape
+        else:
+            return None
+
+    @shape.setter
+    def shape(self, rect: Rectangle):
+        self._shape = rect
+
     def __init__(self, sizeX=0, sizeY=0, min_size=None):
         self.cell_size = (sizeX,sizeY)
         self.ID = "Widget"
-        self.signals = {} 
+        self.signals = {}
+
+        self.visible = True
+        self._shape = None
+        self.is_focused = False
 
         self._fromTranslate = cairo.Matrix()
         self._fromRotate = cairo.Matrix()
@@ -35,7 +52,6 @@ class Widget:
 
         self.__prepare_to_click = None
 
-        self.visible = True
 
         if min_size is not None:
             self._min_size = min_size
@@ -149,6 +165,9 @@ class Widget:
         self._toScale = cairo.Matrix()
         self.scale(x, y)
 
+    def layout(self, context: cairo.Context):
+        pass
+
     def is_clip_set(self):
         return not (self._clip_start is None)
     
@@ -193,8 +212,13 @@ class Widget:
     def on_mouse_up(self, widget: "Widget", event: MouseEvent) -> bool:
         if self.__prepare_to_click == event.button:
             if self.is_point_in(event):
+                self.is_focused = True
                 self.on_click(widget, event.button)
+            else:
+                self.is_focused = False
             self.__prepare_to_click = None
+        else:
+            self.is_focused = False
         return False
     
     def on_key_down(self, widget: "Widget", event: KeyboardEvent) -> bool:
@@ -207,9 +231,9 @@ class Widget:
         return
     
     def is_point_in(self,p: Point, category=MouseEvent.UNKNOWN) -> bool:
-        # if category == MouseEvent.MOUSE_UP:
-        #     return True
-        if not self.is_clip_set():
+        if self.shape is not None:
+            return self.shape.is_point_in(p)
+        elif not self.is_clip_set():
             return False
         else:
             return self.clip_rectangle.is_point_in(p)

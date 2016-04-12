@@ -18,6 +18,7 @@ from crucipixel.interface.puzzle_stage.complete import PuzzleScreen
 from crucipixel.logic import core
 from lightwidgets.debug import WidgetDebug
 from lightwidgets.stock_widgets.buttons import click_left_button_wrapper
+from lightwidgets.stock_widgets.containers import UncheckedContainer
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.support import gtk_to_rgb
 

@@ -36,8 +36,12 @@ class Container(Widget):
     def remove_obj(self,widget):
         raise NotImplementedError()
     
-    # def remove_id(self,id_v:"id"):
-    #     raise NotImplementedError()
+    def layout(self, context: cairo.Context):
+        for child in self.list:
+            if child.visible:
+                context.save()
+                child.layout(context)
+                context.restore()
 
     def on_draw(self, widget: Widget, context: cairo.Context):
         for child in self.list:
@@ -174,7 +178,6 @@ class Container(Widget):
     def set_max_size(self, width: int, height: int):
         self.father.set_max_size(width, height)
 
-                        
 
 class UncheckedContainer(Container):
     
@@ -201,4 +204,3 @@ class UncheckedContainer(Container):
         self._widget_list = [(top, list_widget)
                              for (top, list_widget) in self._widget_list
                              if list_widget != widget]
-    

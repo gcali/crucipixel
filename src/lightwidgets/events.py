@@ -12,6 +12,8 @@ def _transform_mouse_event(event_type,e,w):
     new_e = MouseEvent(event_type,x,y)
     if e.state & Gdk.ModifierType.CONTROL_MASK:
         new_e.modifiers.append('ctrl')
+    elif e.state & Gdk.ModifierType.SHIFT_MASK:
+        new_e.modifiers.append('shift')
     try:
         if e.button == 1:
             new_e.button = MouseButton.LEFT

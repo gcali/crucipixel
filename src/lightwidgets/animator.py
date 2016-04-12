@@ -5,9 +5,41 @@ Created on Mar 23, 2015
 '''
 from threading import RLock, Condition, Thread
 import time
+from typing import Callable
+
+from gi.repository import GLib
+
 from lightwidgets.geometry import Point
 from lightwidgets.physics import get_speed_from_uniform_acceleration,\
     get_position_from_uniform_acceleration, get_position_from_uniform_speed
+
+
+class RepeatedAction:
+
+    def __init__(self,
+                 action: Callable[[], bool],
+                 interval: int=100,
+                 skip: int=0,
+                 first: bool=False):
+
+        self.end = False
+        self.__interval = interval
+        self.__skip = skip
+
+        def closed_action() -> bool:
+            if self.__skip > 0:
+                self.__skip -= 1
+                return True
+            else:
+                return (not self.end) and action()
+        self.__action = closed_action
+        self.__first_action = (lambda: True) if not first else action
+
+    def start(self) -> "RepeatedAction":
+        if self.__first_action():
+            GLib.timeout_add(self.__interval, self.__action)
+        return self
+
 
 class Animator:
     

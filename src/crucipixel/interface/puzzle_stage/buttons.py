@@ -1,4 +1,4 @@
-from typing import Callable, Tuple
+from typing import Callable, Tuple, List, Iterable
 
 import cairo
 
@@ -8,8 +8,88 @@ from lightwidgets.stock_widgets.buttons import Button, BetterButton, \
     click_left_button_wrapper
 from lightwidgets.stock_widgets.containers import UncheckedContainer
 from lightwidgets.stock_widgets.geometrical import DrawableRoundedRectangle
+from lightwidgets.stock_widgets.layout import SetAlignment, Alignment
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.widget import Widget
+
+
+class OrderedButtons(UncheckedContainer):
+
+    def __init__(self,
+                 button_names: Iterable[Iterable[str]],
+                 background_color: Tuple[int, int, int] =\
+                     global_constants.background,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self._padding = 10
+        self._buttons = [
+            [BetterButton(name, 20, self._padding, origin=BetterButton.LEFT)
+             for name in series]
+            for series in button_names
+        ]
+
+        self._active = [
+            0 for _ in self._buttons
+        ]
+
+        for series, active in zip(self._buttons, self._active):
+            for b in series:
+                self.add(b)
+                b.visible = False
+            series[active].visible = True
+
+        self.background_color = background_color
+
+    def _iter_over_visible(self) -> Iterable[BetterButton]:
+        for series, active in zip(self._buttons, self._active):
+            yield series[active]
+
+    def set_action(self, index: int, series_position: int,
+                   action: Callable[[], None]):
+        self._buttons[index][series_position].on_click_action = action
+
+    def next_visible(self, index: int):
+        old = self._active[index]
+        new = (old + 1) % len(self._buttons[index])
+        self._buttons[index][old].visible = False
+        self._buttons[index][new].visible = True
+        self._active[index] = new
+        self.invalidate()
+
+    def layout(self, context: cairo.Context):
+        super().layout(context)
+
+        height = 0
+        width = self._padding
+        for button in self._iter_over_visible():
+            button.set_translate(width, self._padding)
+            height = max(height, button.shape.height)
+            width += button.shape.width + self._padding
+        for button in self._iter_over_visible():
+            button.min_height = height
+            button.layout(context)
+
+        height += 2 * self._padding
+
+        self.shape = DrawableRoundedRectangle(
+            Point(0, 0),
+            width,
+            height
+        )
+
+    def on_draw(self, widget: Widget, context: cairo.Context):
+
+        context.save()
+        context.set_source_rgb(*self.background_color)
+        self.shape.draw_on_context(context)
+        context.fill_preserve()
+        context.set_source_rgb(0,0,0)
+        context.set_line_width(1)
+        context.stroke()
+
+        context.restore()
+
+        super().on_draw(widget, context)
 
 
 class GridButtons(UncheckedContainer):
@@ -164,15 +244,20 @@ def main():
     main_window = MainWindow(title="Grid buttons")
     root = Root()
     root.set_main_window(main_window)
-    root.set_min_size(500, 500)
+    root.set_min_size(100, 100)
 
-    grid_buttons = GridButtons()
+    grid_buttons = OrderedButtons([["Save", "Edit"], ["Load"]])
 
-    grid_buttons.on_save_action = click_left_button_wrapper(lambda: print("I'm saving!"))
-    grid_buttons.on_load_action = click_left_button_wrapper(lambda: print("I'm loading!"))
-    grid_buttons.on_quit_action = click_left_button_wrapper(lambda: print("I'm quitting!"))
+    def action():
+        grid_buttons.next_visible(0)
+    grid_buttons.set_action(0, 0, click_left_button_wrapper(action))
+    grid_buttons.set_action(0, 1, click_left_button_wrapper(action))
 
-    root.set_child(grid_buttons)
+    # grid_buttons.on_save_action = click_left_button_wrapper(lambda: print("I'm saving!"))
+    # grid_buttons.on_load_action = click_left_button_wrapper(lambda: print("I'm loading!"))
+    # grid_buttons.on_quit_action = click_left_button_wrapper(lambda: print("I'm quitting!"))
+
+    root.set_child(SetAlignment(SetAlignment(grid_buttons, Alignment.RIGHT), Alignment.VERTICAL_CENTER))
 
     main_window.start_main()
 

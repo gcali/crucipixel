@@ -13,6 +13,7 @@ from gi.repository.Gdk import EventMask
 from lightwidgets.events import _transform_mouse_event,\
     _transform_keyboard_event
 # from gi.overrides.Gdk import Gdk
+from lightwidgets.geometry import Rectangle, Point
 from lightwidgets.stock_widgets.widget import Widget
 from numbers import Number
 
@@ -69,6 +70,11 @@ class Root(Gtk.DrawingArea):
     @property
     def container_size(self):
         return self.window_size
+
+    @property
+    def shape(self):
+        w, h = self.container_size
+        return Rectangle(Point(0, 0), w, h)
     
     def set_main_window(self, window):
         window.add(self)
@@ -86,6 +92,9 @@ class Root(Gtk.DrawingArea):
     
     def on_draw(self, widget:"Widget", context:"cairo.Context"):
         if self._child is not None:
+            context.save()
+            self._child.layout(context)
+            context.restore()
             context.save()
             context.transform(self._child.fromWidgetCoords)
             if self._child.is_clip_set():

@@ -34,6 +34,7 @@ class BetterButton(Widget):
                  label_color: Tuple[int, int, int] = (0, 0, 0),
                  **kwargs):
         super().__init__(self, **kwargs)
+        self.min_height = 0
         self.label = label
         self.padding = padding
         self.origin = origin
@@ -58,6 +59,10 @@ class BetterButton(Widget):
         if self.on_click_action is not None:
             self.on_click_action(button)
 
+    def layout(self, context: cairo.Context):
+        super().layout(context)
+        self.set_shape_from_context(context)
+
     def set_shape_from_context(self, context: cairo.Context):
         label = self.label
         padding = self.padding
@@ -65,6 +70,7 @@ class BetterButton(Widget):
         xb, yb, w, h, xa, ya = context.text_extents(label)
         width = padding * 2 + xa
         height = padding * 2 + h
+        height = max(height, self.min_height)
 
         if self.origin == self.LEFT:
             start = Point(0, 0)
