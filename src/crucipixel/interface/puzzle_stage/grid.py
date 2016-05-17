@@ -26,7 +26,7 @@ from lightwidgets.support import DefaultDict, clamp, get_from_to_inclusive
 class CrucipixelGrid(Widget):
 
     def __init__(self, crucipixel: core.Crucipixel,
-                 cell_width: int=10, cell_height: int=10, **kwargs):
+                 cell_width: int=20, cell_height: int=20, **kwargs):
         super().__init__(**kwargs)
 
         self.crucipixel = crucipixel
@@ -127,7 +127,6 @@ class CrucipixelGrid(Widget):
             self._handle_guide_line_check(Orientation.HORIZONTAL, row)
         for col in cols:
             self._handle_guide_line_check(Orientation.VERTICAL, col)
-
 
     def handle_selector(self, index: int, button: MouseButton):
         self._mouse_button_to_crucipixel_cell_value[button] = self._cell_value_order[index]
@@ -289,8 +288,8 @@ class CrucipixelGrid(Widget):
         for row in range(self.number_of_rows):
             for col in range(self.number_of_cols):
                 value = self.get_cell_value(row, col)
-                rectangle = Rectangle(Point(col * self.cell_width - 1,
-                                            row * self.cell_height - 1),
+                rectangle = Rectangle(Point(col * self.cell_width,
+                                            row * self.cell_height),
                                       self.cell_width + 2,
                                       self.cell_height + 2)
                 self._draw_cell(context, value, rectangle)
@@ -490,6 +489,10 @@ class CrucipixelGrid(Widget):
     def on_mouse_exit(self) -> bool:
         self._should_highlight = False
         return False
+
+    @property
+    def shape(self) -> Rectangle:
+        return Rectangle(Point(0, 0), self._total_width, self._total_height)
 
     def is_point_in(self,p: Point ,category=MouseEvent.UNKNOWN) -> bool:
         # if category == MouseEvent.MOUSE_UP \

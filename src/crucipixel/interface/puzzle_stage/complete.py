@@ -16,6 +16,7 @@ from lightwidgets.geometry import Point
 from gi.repository import Gdk
 
 from lightwidgets.stock_widgets.buttons import click_left_button_wrapper
+from lightwidgets.stock_widgets.layout import SetAlignment, Alignment
 from lightwidgets.stock_widgets.overlay import TextOverlay
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.widget import Widget
@@ -63,7 +64,7 @@ class CompleteCrucipixel(UncheckedContainer):
     def __init__(self,
                  crucipixel: core.Crucipixel,
                  start=Point(0,0),
-                 cell_size=15,
+                 cell_size=20,
                  *args, **kwargs):
         super().__init__(*args,**kwargs)
         print("Starting at", start)
@@ -220,14 +221,13 @@ class PuzzleScreen(UncheckedContainer):
         self.selector = None
         self._mouse_down = False
         self._click_point = Point(0,0)
-        # self.counter = 0
         self.navigator = None
         self.buttons = None
 
     def start_all(self, crucipixel: core.Crucipixel):
         self.start_crucipixel(crucipixel)
         self.start_selector()
-        self.start_navigator()
+        # self.start_navigator()
         self.start_buttons()
         self.buttons.on_save_action = click_left_button_wrapper(lambda: self.crucipixel.save())
         self.buttons.on_load_action = click_left_button_wrapper(lambda: self.crucipixel.load())
@@ -271,7 +271,13 @@ class PuzzleScreen(UncheckedContainer):
     def start_buttons(self):
         self.buttons = GridButtons()
         self.buttons.ID = "GridButtons"
-        self.add(self.buttons, top=-1)
+        self.add(
+            SetAlignment(
+                SetAlignment(self.buttons, Alignment.TOP),
+                Alignment.RIGHT
+            ),
+            top=-1
+        )
 
     def start_navigator(self):
         self.navigator = Navigator()
@@ -294,10 +300,9 @@ class PuzzleScreen(UncheckedContainer):
         self.add(self.grid)
 
     def on_mouse_down(self, widget, event: MouseEvent):
-        if 'ctrl' in event.modifiers:
-            handled = False
-        else:
-            handled = super().on_mouse_down(widget, event)
+        handled = self.grid.visible
+        if 'ctrl' not in event.modifiers:
+            handled = super().on_mouse_down(widget, event) or handled
         if not handled:
             self._mouse_down = True
             self._click_point = Point(event.x, event.y)
@@ -320,7 +325,9 @@ class PuzzleScreen(UncheckedContainer):
     def on_draw(self, widget: Widget, context: cairo.Context):
         selector_width = self.selector.width
         self.grid.left_padding = selector_width + 10
-        buttons_width, buttons_height = self.buttons.get_width_height(context)
+        buttons_shape = self.buttons.shape
+        # buttons_width, buttons_height = self.buttons.get_width_height(context)
+        buttons_width, buttons_height = buttons_shape.width, buttons_shape.height
         self.grid.upper_padding = buttons_height + 30
 
         self.min_size = selector_width + buttons_width + 10, 100

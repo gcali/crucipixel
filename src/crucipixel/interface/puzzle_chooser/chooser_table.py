@@ -439,6 +439,7 @@ class TableContents(Widget):
         self._highlight(None)
 
     def on_draw(self, widget: Widget, context: cairo.Context):
+        self.min_size = 200, 150
         super().on_draw(widget, context)
 
         context.save()

@@ -1,4 +1,3 @@
-from time import sleep
 from typing import Iterable, Tuple
 
 from crucipixel.interface.puzzle_stage.guides import Orientation

@@ -17,6 +17,10 @@ class Widget:
     NO_CLIP=None
 
     @property
+    def is_shape_set(self) -> bool:
+        return self._shape is not None
+
+    @property
     def shape(self) -> Rectangle:
         if self._shape is not None:
             return self._shape

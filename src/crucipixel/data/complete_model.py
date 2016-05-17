@@ -1,4 +1,3 @@
-from time import sleep
 from typing import Tuple, List
 
 from crucipixel.data.crucipixel_instance import CrucipixelInstance
@@ -18,7 +17,7 @@ class CrucipixelCompleteModel:
         else:
             self.instances = [
                 (CrucipixelInstance(len(scheme.rows), len(scheme.cols)),
-                GuidesInstance())
+                 GuidesInstance())
             ]
 
         self.file_name_complete = None

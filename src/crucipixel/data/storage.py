@@ -1,4 +1,4 @@
-import os, glob
+import os, glob, re
 from typing import List
 
 from crucipixel.data import json_parser
@@ -6,6 +6,7 @@ from crucipixel.data.complete_model import CrucipixelCompleteModel
 from crucipixel.data.crucipixel_scheme import CrucipixelScheme
 from crucipixel.data.json_parser import encode_model
 from crucipixel.options import Options
+
 
 
 class UnknownPathException(Exception):
@@ -25,6 +26,12 @@ def _get_default_schemes_path() -> str:
             return os.environ['HOME'] + os.sep + ".crucipixel"
         except KeyError:
             return os.getcwd()
+
+
+def get_default_path_from_title(title: str) -> str:
+    default_schemes_path = _get_default_schemes_path()
+    title_converted = re.sub('\s+', '_', title).strip().lower()
+    return default_schemes_path + os.sep + title_converted + ".json"
 
 
 def get_models(options: Options = None) -> List[CrucipixelCompleteModel]:
@@ -52,8 +59,7 @@ def save_model(model: CrucipixelCompleteModel, path: str = None):
 
 def main() -> int:
 
-    for scheme in get_schemes():
-        print(scheme)
+    print(get_default_path_from_title("Ciao io sono uno schema     !!!\t ciao"))
 
 
 if __name__ == '__main__':

@@ -4,13 +4,17 @@ from typing import Callable, Tuple
 import cairo
 
 from crucipixel.interface import global_constants
+from crucipixel.logic import core
 from lightwidgets.animator import RepeatedAction
 from lightwidgets.events import MouseButton, MouseEvent, KeyboardEvent
 from lightwidgets.geometry import Point, Rectangle
 from lightwidgets.stock_widgets.arrow import Arrow, KeepPressingArrow
+from lightwidgets.stock_widgets.buttons import BetterButton, \
+    click_left_button_wrapper
 from lightwidgets.stock_widgets.containers import UncheckedContainer
 from lightwidgets.stock_widgets.geometrical import DrawableRectangle
-from lightwidgets.stock_widgets.layout import VerticalCenter
+from lightwidgets.stock_widgets.layout import VerticalCenter, SetAlignment, \
+    Alignment, Border
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.widget import Widget
 
@@ -118,7 +122,7 @@ class Text(Widget):
         self.shape = None
 
     def layout(self, context: cairo.Context):
-        if self.shape is None:
+        if not self.is_shape_set:
             context.save()
             context.set_font_size(self.font_size)
             generator = (context.text_extents(chr(letter) * 10)
@@ -138,7 +142,7 @@ class Text(Widget):
             # self.clip_rectangle = self.shape
 
     def on_draw(self, widget: Widget, context: cairo.Context):
-        if self.shape is None:
+        if not self.is_shape_set:
             self.layout(context)
 
         context.set_font_size(self.font_size)
@@ -159,7 +163,7 @@ class Text(Widget):
                           shape.width - self.padding,
                           shape.height)
         context.clip()
-        context.move_to(shape.start.x + shape.width - self.padding - w,
+        context.move_to(shape.start.x + (shape.width - self.padding - w)/2,
                         shape.start.y + shape.height - self.padding)
         context.show_text(self.label)
 
@@ -186,6 +190,7 @@ class TextExpandable(Text):
 
     def layout(self, context: cairo.Context):
         if self.father is not None:
+            print("Container size:", self.container_size[0])
             self.width = self.container_size[0] - self.expansion_padding
         super().layout(context)
 
@@ -259,10 +264,11 @@ class Number(Widget):
         context.show_text(text)
 
     def is_point_in(self, p: "Point", category=MouseEvent.UNKNOWN):
-        if self.shape is None:
+        if not self.is_shape_set:
             return False
         else:
             return self.shape.is_point_in(p)
+
 
 class IncrementDecrement(UncheckedContainer):
 
@@ -346,6 +352,14 @@ class NumberSelector(UncheckedContainer):
         self.increment_decrement = None
         self.add(self.number)
 
+    @property
+    def value(self) -> int:
+        return self.number.value
+
+    @value.setter
+    def value(self, value: int):
+        self.number.value = value
+
     def layout(self, context: cairo.Context):
         super().layout(context)
         if self.increment_decrement is None:
@@ -382,60 +396,141 @@ class EditorInputWidgets(UncheckedContainer):
     def __init__(self):
         super().__init__()
         self.rows_cols_distance = 40
-        self.rows = WrapTitle(NumberSelector(2), "Rows")
-        self.cols = WrapTitle(NumberSelector(2), "Cols")
-        self.text = WrapTitle(TextExpandable(expansion_padding=2), "Title")
-        self.add(self.rows)
-        self.add(self.cols)
-        self.add(self.text)
-        self._width = 0
+        self.__rows = NumberSelector(2)
+        self.__cols = NumberSelector(2)
+        self.__text = TextExpandable(expansion_padding=2)
+        self.__wrapped_rows = WrapTitle(self.__rows, "Rows")
+        self.__wrapped_cols = WrapTitle(self.__cols, "Cols")
+        self.__wrapped_text = WrapTitle(self.__text, "Title")
+        self.__back_button = BetterButton("Back", origin=BetterButton.LEFT)
+        self.__create_button = BetterButton("Create", origin=BetterButton.RIGHT)
+        self.__create_action = lambda crucipixel: None
+        self.add(self.__wrapped_rows)
+        self.add(self.__wrapped_cols)
+        self.add(self.__wrapped_text)
+        self.add(self.__back_button)
+        self.add(self.__create_button)
+        self.__width = 0
+        self.__shape = None
+
+    @property
+    def title(self) -> str:
+        return self.__text.label
+
+    @property
+    def rows(self) -> int:
+        return self.__rows.value
+
+    @property
+    def cols(self) -> int:
+        return self.__cols.value
+
+    def set_back_action(self, action: Callable[[], None]):
+        self.__back_button.on_click_action = click_left_button_wrapper(action)
+
+    def set_create_action(self, action: Callable[[core.CrucipixelEditor], None]):
+        self.__create_button.on_click_action = click_left_button_wrapper(
+            lambda: action(core.CrucipixelEditor(self.rows, self.cols, self.title))
+        )
+
+    @property
+    def shape(self) -> Rectangle:
+        return self.__shape
+
+    @shape.setter
+    def shape(self, value: Rectangle):
+        self.__shape = value
 
     @property
     def container_size(self):
         cs = super().container_size
-        return self._width, cs[1]
-
+        return self.__width, cs[1]
 
     def layout(self, context: cairo.Context):
-        self.rows.layout(context)
-        self.cols.layout(context)
+        super().layout(context)
         container_width = super().container_size[0]
-        offset_x = self.rows.shape.width + max(
+        rows_shape = self.__wrapped_rows.shape
+        cols_shape = self.__wrapped_cols.shape
+        text_shape = self.__wrapped_text.shape
+        offset_x = rows_shape.width + max(
             self.rows_cols_distance,
-            container_width - self.rows.shape.width - self.cols.shape.width
+            container_width - rows_shape.width - cols_shape.width
         )
 
-        self.cols.set_translate(
+        self.__wrapped_cols.set_translate(
             offset_x,
             0
         )
-        self._width = offset_x + self.cols.shape.width
-        self.text.layout(context)
-        self.text.set_translate(0, self.rows.shape.height + self.rows_cols_distance)
+        self.__width = offset_x + cols_shape.width
+        wrapped_text_start = rows_shape.height + self.rows_cols_distance
+        self.__wrapped_text.set_translate(
+            0,
+            wrapped_text_start
+        )
+        buttons_start = wrapped_text_start + self.__wrapped_text.shape.height + 10
+
+        self.__back_button.set_translate(
+            10,
+            buttons_start
+        )
+
+        self.__create_button.set_translate(
+            self.__width - 10,
+            buttons_start
+        )
+
         self.shape = DrawableRectangle(
             Point(0, 0),
-            self._width,
-            self.rows.shape.height + self.rows_cols_distance + self.text.shape.height
+            self.__width,
+            # rows_shape.height + self.rows_cols_distance + text_shape.height
+            buttons_start + self.__back_button.shape.height
         )
+        # Workaround for TextExpandable needing an exact container_size
+        super().layout(context)
+
 
 class EditorInput(WrapTitle):
 
     def __init__(self):
         self.widgets = EditorInputWidgets()
-        super().__init__(self.widgets, "Ciao")
+        super().__init__(self.widgets, "Insert data")
+
+    def set_back_action(self, action: Callable[[], None]):
+        self.widgets.set_back_action(action)
+
+    def set_create_action(self, action: Callable[[core.CrucipixelEditor], None]):
+        self.widgets.set_create_action(action)
+
+    def layout(self, context: cairo.Context):
+        super().layout(context)
+        self.min_size = 400, self.shape.height + 50
+
+    @property
+    def input_title(self) -> str:
+        return self.widgets.title
+
+    @property
+    def input_rows(self) -> int:
+        return self.widgets.rows
+
+    @property
+    def input_cols(self) -> int:
+        return self.widget.cols
+
 
 def main() -> int:
     main_window = MainWindow(title="Number test")
     root = Root(100, 100)
     root.set_main_window(main_window)
-    # ns = NumberSelector()
-    # ns.translate(50, 50)
-    #
-    # t = WrapTitle(WrapTitle(TextExpandable(label="Ciao come stai ti sembra un giorno felice per andare al mare"), "Ciao"), "Come")
-    # # t = WrapTitle(ns, "Ciao")
-    # t.translate(50, 50)
-    # root.set_child(t)
-    root.set_child(VerticalCenter(EditorInput()))
+    root.set_child(
+        Border(
+            SetAlignment(
+                EditorInput(),
+                Alignment.VERTICAL_CENTER
+            ),
+            left=50, right=50
+        )
+    )
 
     main_window.start_main()
     return 0
