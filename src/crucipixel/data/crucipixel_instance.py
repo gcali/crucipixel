@@ -79,13 +79,15 @@ class CrucipixelInstance:
         rows = o['rows']
         cols = o['cols']
         status = [
-            [CrucipixelCellValue(o['status'][row][col]) for col in range(rows)]
+            [CrucipixelCellValue(o['status'][row][col]) for col in range(cols)]
             for row in range(rows)
         ]
 
         return CrucipixelInstance(rows, cols, status, moves)
 
     def get_row_col_value(self, row: int, col: int) -> CrucipixelCellValue:
+        if col > 0:
+            pass
         return self.status[row][col]
 
     def make_move(self, atoms: Iterable[MoveAtom]):
