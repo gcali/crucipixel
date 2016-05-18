@@ -59,8 +59,8 @@ class Navigator(UncheckedContainer):
         self._should_pass_move = False
         return super().on_mouse_exit()
 
-    def on_mouse_move(self, w, e):
-        super().on_mouse_move(w, e)
+    def on_mouse_move(self, widget, event):
+        super().on_mouse_move(widget, event)
         return False
 
     def on_mouse_down(self, widget, event):

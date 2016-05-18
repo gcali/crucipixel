@@ -202,13 +202,22 @@ class Number(Widget):
         self.digits = digits
         self.font_size = font_size
         self.padding = padding
+        self._max_value = None
         self._min_value = 1
         self._value = 1
         self.shape = None
 
     @property
     def max_value(self) -> int:
-        return 10 ** self.digits - 1
+        if self._max_value is None:
+            return 10 ** self.digits - 1
+        else:
+            return max(self._max_value, self._min_value)
+
+    @max_value.setter
+    def max_value(self, value: int):
+        self._max_value = value
+        self._value = min(value, self._value)
 
     @property
     def min_value(self) -> int:
@@ -398,15 +407,19 @@ class EditorInputWidgets(UncheckedContainer):
         self.rows_cols_distance = 40
         self.__rows = NumberSelector(2)
         self.__cols = NumberSelector(2)
+        self.__hard = NumberSelector(1)
+        self.__hard.number.max_value = 5
         self.__text = TextExpandable(expansion_padding=2)
         self.__wrapped_rows = WrapTitle(self.__rows, "Rows")
         self.__wrapped_cols = WrapTitle(self.__cols, "Cols")
         self.__wrapped_text = WrapTitle(self.__text, "Title")
+        self.__wrapped_hard = WrapTitle(self.__hard, "Hard")
         self.__back_button = BetterButton("Back", origin=BetterButton.LEFT)
         self.__create_button = BetterButton("Create", origin=BetterButton.RIGHT)
         self.__create_action = lambda crucipixel: None
         self.add(self.__wrapped_rows)
         self.add(self.__wrapped_cols)
+        self.add(self.__wrapped_hard)
         self.add(self.__wrapped_text)
         self.add(self.__back_button)
         self.add(self.__create_button)
@@ -425,12 +438,16 @@ class EditorInputWidgets(UncheckedContainer):
     def cols(self) -> int:
         return self.__cols.value
 
+    @property
+    def hard(self) -> int:
+        return self.__hard.value
+
     def set_back_action(self, action: Callable[[], None]):
         self.__back_button.on_click_action = click_left_button_wrapper(action)
 
     def set_create_action(self, action: Callable[[core.CrucipixelEditor], None]):
         self.__create_button.on_click_action = click_left_button_wrapper(
-            lambda: action(core.CrucipixelEditor(self.rows, self.cols, self.title))
+            lambda: action(core.CrucipixelEditor(self.rows, self.cols, self.hard, self.title))
         )
 
     @property
@@ -451,11 +468,20 @@ class EditorInputWidgets(UncheckedContainer):
         container_width = super().container_size[0]
         rows_shape = self.__wrapped_rows.shape
         cols_shape = self.__wrapped_cols.shape
+        hard_shape = self.__wrapped_hard.shape
         text_shape = self.__wrapped_text.shape
-        offset_x = rows_shape.width + max(
-            self.rows_cols_distance,
-            container_width - rows_shape.width - cols_shape.width
-        )
+        distance = max(self.rows_cols_distance,
+                       (container_width - rows_shape.width\
+                                        - hard_shape.width\
+                                        - cols_shape.width)/2)
+        offset_x = rows_shape.width + distance
+        # offset_x = rows_shape.width + max(
+        #     self.rows_cols_distance,
+        #     container_width - rows_shape.width - cols_shape.width
+        # )
+
+        self.__wrapped_hard.set_translate(offset_x, 0)
+        offset_x += hard_shape.width + distance
 
         self.__wrapped_cols.set_translate(
             offset_x,
@@ -512,6 +538,10 @@ class EditorInput(WrapTitle):
     @property
     def input_rows(self) -> int:
         return self.widgets.rows
+
+    @property
+    def input_hard(self) -> int:
+        return self.widgets.hard
 
     @property
     def input_cols(self) -> int:

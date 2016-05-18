@@ -150,14 +150,17 @@ class Crucipixel:
             #     callback(value)
 
     def _check_if_won(self):
+        print(self.number_of_rows, self.number_of_cols)
         for line in range(self.number_of_rows):
+            print("Line", line)
             if (not self.is_line_full(Orientation.HORIZONTAL, line)) or\
                     self.is_line_wrong(Orientation.HORIZONTAL, line):
                 self.is_won = False
                 return
         for col in range(self.number_of_cols):
-            if (not self.is_line_full(Orientation.VERTICAL, line)) or \
-                    self.is_line_wrong(Orientation.VERTICAL, line):
+            print("Col", col)
+            if (not self.is_line_full(Orientation.VERTICAL, col)) or \
+                    self.is_line_wrong(Orientation.VERTICAL, col):
                 self.is_won = False
                 return
 
@@ -176,11 +179,12 @@ class Crucipixel:
 
 class CrucipixelEditor(Crucipixel):
 
-    def __init__(self, rows: int, cols: int, title: str):
+    def __init__(self, rows: int, cols: int, hard: int, title: str):
 
         # super().__init__()
         self.__number_of_rows = rows
         self.__number_of_cols = cols
+        self.hard = hard
         self.title = title
         self.crucipixel_instance = CrucipixelInstance(rows, cols)
 
@@ -208,13 +212,24 @@ class CrucipixelEditor(Crucipixel):
                                element: int):
         pass
 
-    def save(self, force=False):
+    def save(self, force=False) -> None:
+        """
+
+        Args:
+            force: if True, overwrites data if a scheme with the same name
+                   exists; if False, in case of collision raises FileExistsError
+
+        Raises:
+            FileExistsError: a scheme with the same name already exists
+                             and force was False
+
+        """
         file_name = get_default_path_from_title(self.title)
         if not force:
             with open(file_name, 'x'):
                 pass
         rows, cols = self._get_rows_cols_guides()
-        scheme = CrucipixelScheme(self.title, rows, cols)
+        scheme = CrucipixelScheme(self.title, rows, cols, self.hard)
         model = CrucipixelCompleteModel(scheme, [])
         model.file_name_complete = file_name
         print(file_name)

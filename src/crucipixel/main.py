@@ -100,12 +100,12 @@ def create_main_menu(root: Root) -> Callable[[], None]:
             [
                 "New game",
                 "Create level",
-                "Options",
+                # "Options",
                 "Exit"
             ], [
                 click_left_button_wrapper(lambda: print("New game!")),
                 click_left_button_wrapper(lambda: print("Create level!")),
-                click_left_button_wrapper(lambda: None),
+                # click_left_button_wrapper(lambda: None),
                 click_left_button_wrapper(lambda: Gtk.main_quit())
             ])
         main_menu.set_callback(0, click_left_button_wrapper(create_new_game(root)))

@@ -116,11 +116,11 @@ class Container(Widget):
                                         take_on_mouse_up,
                                         MouseEvent.MOUSE_UP)
 
-    def on_mouse_move(self, w, e):
-        super().on_mouse_move(w,e)
+    def on_mouse_move(self, widget: Widget, event: MouseEvent):
+        super().on_mouse_move(widget, event)
         def take_on_mouse_move(w):
             return w.on_mouse_move
-        return self._handle_mouse_event(w,e,take_on_mouse_move,MouseEvent.MOUSE_MOVE)
+        return self._handle_mouse_event(widget, event, take_on_mouse_move, MouseEvent.MOUSE_MOVE)
     
     def on_mouse_exit(self):
         for child in reversed(list(self.list)):

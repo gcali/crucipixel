@@ -308,14 +308,14 @@ class PuzzleScreen(UncheckedContainer):
             self._click_point = Point(event.x, event.y)
             self._translate_vector = Point(self.crucipixel.fromWidgetCoords.transform_point(0,0))
     
-    def on_mouse_move(self, w, e):
+    def on_mouse_move(self, widget, event):
         if self._mouse_down:
-            delta_x = int(e.x - self._click_point.x)
-            delta_y = int(e.y - self._click_point.y)
+            delta_x = int(event.x - self._click_point.x)
+            delta_y = int(event.y - self._click_point.y)
             self.crucipixel.set_translate(self._translate_vector.x + delta_x,
                                           self._translate_vector.y + delta_y)
             self.invalidate()
-        super().on_mouse_move(w,e)
+        super().on_mouse_move(widget, event)
     
     def on_mouse_up(self, widget, event):
         if self._mouse_down:

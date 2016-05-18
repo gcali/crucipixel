@@ -211,7 +211,7 @@ class Widget:
 
     def on_mouse_down(self, widget: "Widget", event: MouseEvent) -> bool:
         self.__prepare_to_click = event.button
-        return False
+        return True
     
     def on_mouse_up(self, widget: "Widget", event: MouseEvent) -> bool:
         if self.__prepare_to_click == event.button:

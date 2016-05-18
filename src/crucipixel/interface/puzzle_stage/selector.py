@@ -73,6 +73,8 @@ class BetterSelector(UncheckedContainer):
             start_y
         )
 
+        self.shape = self.bounding_rectangle
+
     @property
     def width(self) -> int:
         return self.bounding_rectangle.width + 1
