@@ -1,10 +1,14 @@
-from typing import Tuple, List
+from typing import Tuple, List, Callable
 
 import cairo
 
+from gi.overrides.Gtk import Gtk
+from gi.repository import Gdk
+
 from lightwidgets.events import MouseEvent
 from lightwidgets.geometry import Point
-from lightwidgets.stock_widgets.buttons import BetterButton
+from lightwidgets.stock_widgets.buttons import BetterButton, \
+    click_left_button_wrapper
 from lightwidgets.stock_widgets.containers import UncheckedContainer
 from lightwidgets.stock_widgets.geometrical import DrawableRectangle
 from lightwidgets.stock_widgets.root import MainWindow, Root
@@ -25,7 +29,7 @@ _new_game_help = [
 ]
 
 _game_loaded_help = [
-    "Click (or click and drag) on the grid to select, clear or restore to "
+    "Click (or click and drag) on the grid to fill, clear or restore to "
     "default a cell; the three different actions are by default binded "
     "respectively to the left, right and middle click, but the bindings can "
     "be modified by clicking on the selector in the top left corner.",
@@ -33,6 +37,12 @@ _game_loaded_help = [
     "The numbers on the guides can be clicked on to mark a group as "
     "completed; a filled line or column is automatically marked as either "
     "done or wrong.",
+
+    "The puzzle can be interacted with via keyboard: a cell can be selected "
+    "using the arrow keys, 'w', 'a', 's' and 'd' or 'k', 'h', 'j' and 'l'; "
+    "from there a cell or a group of cells can be filled, cleared or restored "
+    "to the default value respectively with 'space' (or 'z'), 'x' (or 'o'), "
+    "'c' (or 'p').",
 
     "The current progress can be saved at any time by clicking on the 'Save' "
     "button; any old instance will be overwritten. The saved instance will be "
@@ -49,9 +59,25 @@ _game_loaded_help = [
     "on 'Edit'."
 ]
 
-# _help_text = [
-#
-# ]
+_create_menu_help = [
+    "Choose the number of rows, the number of cols and how hard it is the "
+    "scheme by selecting the appropriate number with the arrows; type its "
+    "title in the bottom cell. When ready, click on 'Create' to "
+    "start creating the scheme."
+]
+
+_scheme_creation_help = [
+    "The interaction with the grid is mostly the same as in the playing "
+    "stage; the bindings are the same, the selector works in the same way "
+    "and the 'Undo' plays the same role.",
+
+    "When the scheme has no default cells it will be possible to save it; if "
+    "a saved scheme of corresponding name already exists, whether because "
+    "the current one has already been saved or because there's a conflict "
+    "with an old one, a confirmation dialog will ask if it's ok to overwrite "
+    "the already existing one"
+]
+
 
 class HelpSection(UncheckedContainer):
 
@@ -86,6 +112,8 @@ class HelpWindow(UncheckedContainer):
         self.__sections = [
             HelpSection("New game", _new_game_help),
             HelpSection("In game", _game_loaded_help),
+            HelpSection("Create menu", _create_menu_help),
+            HelpSection("Scheme creation", _scheme_creation_help),
         ]
         self.__new_game = HelpSection("New game", _new_game_help)
         # self.__new_game_title = TextArea(["⊰New game⊱"], font_size=20, italic=True)
@@ -137,6 +165,9 @@ class HelpScreen(UncheckedContainer):
         mini = min(0, self.father.container_size[1] -self.__help_window.shape.height)
         return max(min(self.__translation - self.__click_y + y, 0), mini)
 
+    def set_back_action(self, action: Callable[[], None]):
+        self.__back_button.on_click_action = click_left_button_wrapper(action)
+
     def is_point_in(self, p: "Point", category=MouseEvent.UNKNOWN):
         return True
 
@@ -167,6 +198,7 @@ class HelpScreen(UncheckedContainer):
 def main():
 
     win = MainWindow("Help test")
+    win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.9,.9,.9,1))
     root = Root(200, 200)
 
     root.set_main_window(win)

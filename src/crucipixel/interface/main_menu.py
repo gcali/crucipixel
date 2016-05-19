@@ -23,7 +23,7 @@ class BetterMainMenu(UncheckedContainer):
                  labels: List[str],
                  callbacks: List[Callable[[MouseButton], None]],
                  font_size: int=20,
-                 distance: int=30,
+                 distance: int=20,
                  **kwargs):
         self.done = False
         super().__init__(**kwargs)

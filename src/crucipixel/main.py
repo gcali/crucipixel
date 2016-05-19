@@ -11,6 +11,7 @@ from gi.repository import Gdk
 from crucipixel.data import json_parser, storage
 from crucipixel.data.complete_model import CrucipixelCompleteModel
 from crucipixel.interface import global_constants
+from crucipixel.interface.help.help_screen import HelpScreen
 from crucipixel.interface.main_menu import BetterMainMenu
 from crucipixel.interface.puzzle_chooser.chooser_table import ChooserTable, \
     scheme_to_entry
@@ -93,6 +94,16 @@ def create_editor_input(root: Root) -> Callable[[], None]:
     return editor_input
 
 
+def create_help_screen(root: Root) -> Callable[[], None]:
+
+    def help_screen() -> None:
+        help = HelpScreen()
+        help.set_back_action(create_main_menu(root))
+        root.set_child(help)
+
+    return help_screen
+
+
 def create_main_menu(root: Root) -> Callable[[], None]:
     def main_menu() -> None:
         main_menu = BetterMainMenu(
@@ -100,16 +111,17 @@ def create_main_menu(root: Root) -> Callable[[], None]:
             [
                 "New game",
                 "Create level",
-                # "Options",
+                "Help",
                 "Exit"
             ], [
                 click_left_button_wrapper(lambda: print("New game!")),
                 click_left_button_wrapper(lambda: print("Create level!")),
-                # click_left_button_wrapper(lambda: None),
+                click_left_button_wrapper(lambda: None),
                 click_left_button_wrapper(lambda: Gtk.main_quit())
             ])
         main_menu.set_callback(0, click_left_button_wrapper(create_new_game(root)))
         main_menu.set_callback(1, click_left_button_wrapper(create_editor_input(root)))
+        main_menu.set_callback(2, click_left_button_wrapper(create_help_screen(root)))
 
         root.set_child(main_menu)
 
