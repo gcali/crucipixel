@@ -15,13 +15,6 @@ from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.text import TextArea
 from lightwidgets.stock_widgets.widget import Widget
 
-_help_text = ["Io sono un lunghissimo testo di aiuto. Che scopo ho nella "
-              "vita? Principalmente quello di fare il testo di aiuto! Del "
-              "resto sono pur sempre un testo di aiuto. Evviva i testi di "
-              "aiuto!",
-              "Io invece sono il suo cugino piccolo che comincia su un'altra "
-              "riga e finisce proprio qua"]
-
 _new_game_help = [
     "Choose a scheme to play by clicking on its row in the table; "
     "if an instance of that scheme has been saved it will be "
@@ -52,7 +45,8 @@ _game_loaded_help = [
 
     "The view can be moved by dragging the mouse after having clicked on an "
     "empty section or after having clicked anywhere while pressing the 'Ctrl' "
-    "modifier; if needed the zoom can be adjusted with the keys '+' and '-'.",
+    "modifier; if needed the zoom can be adjusted with the keys '+' and '-' "
+    "or with the on screen buttons.",
 
     "When a scheme is completed the view will be centered and the grid will "
     "be hidden to show the full figure; to return to the gaming view, click "
@@ -116,14 +110,10 @@ class HelpWindow(UncheckedContainer):
             HelpSection("Scheme creation", _scheme_creation_help),
         ]
         self.__new_game = HelpSection("New game", _new_game_help)
-        # self.__new_game_title = TextArea(["⊰New game⊱"], font_size=20, italic=True)
-        # self.__new_game_help = TextArea(_new_game_help, font_size=12)
 
         self.add(self.__title)
         for s in self.__sections:
             self.add(s)
-        # self.add(self.__new_game_title)
-        # self.add(self.__new_game_help)
 
     def layout(self, context: cairo.Context):
 
@@ -139,9 +129,6 @@ class HelpWindow(UncheckedContainer):
 
         self.shape = DrawableRectangle(Point(0, 0), self.__title.shape.width,
                                        current_y - padding)
-        # self.__new_game_title.set_translate(0, current_y)
-        # current_y += self.__new_game_title.shape.height + 10
-        # self.__new_game_help.set_translate(10, current_y)
 
     @property
     def container_size(self) -> Tuple[int, int]:

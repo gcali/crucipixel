@@ -9,7 +9,7 @@ from typing import Callable, Tuple
 import cairo
 from lightwidgets.geometry import Point, Rectangle
 from lightwidgets.events import MouseEvent, KeyboardEvent, MouseEventCategory, \
-    MouseButton
+    MouseButton, ScrollEvent
 
 
 class Widget:
@@ -223,6 +223,9 @@ class Widget:
             self.__prepare_to_click = None
         else:
             self.is_focused = False
+        return False
+
+    def on_scroll(self, event: ScrollEvent) -> bool:
         return False
     
     def on_key_down(self, widget: "Widget", event: KeyboardEvent) -> bool:

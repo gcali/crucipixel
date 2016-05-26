@@ -94,7 +94,7 @@ class Container(Widget):
     
     def _handle_keyboard_event(self,widget,event,callback):
         for child in reversed(list(self.list)):
-            if (callback(child)(self,event)):
+            if child.visible and (callback(child)(self,event)):
                 return True
         return False
     

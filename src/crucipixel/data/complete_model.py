@@ -34,11 +34,14 @@ class CrucipixelCompleteModel:
     @staticmethod
     def from_json_object(json_object: object) -> "CrucipixelCompleteModel":
         scheme = CrucipixelScheme.from_json_object(json_object['scheme'])
-        instances = [
-            (CrucipixelInstance.from_json_object(cruci),
-             GuidesInstance.from_json_object(guide))
-            for cruci, guide in json_object['instances']
-        ]
+        try:
+            instances = [
+                (CrucipixelInstance.from_json_object(cruci),
+                 GuidesInstance.from_json_object(guide))
+                for cruci, guide in json_object['instances']
+            ]
+        except KeyError:
+            instances = None
 
         return CrucipixelCompleteModel(scheme, instances)
 

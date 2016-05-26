@@ -5,7 +5,10 @@ Created on May 20, 2015
 '''
 from enum import Enum, unique
 
+import gtk
 from gi.repository import Gdk
+
+
 
 def _transform_mouse_event(event_type,e,w):
     x,y=w.toWidgetCoords.transform_point(e.x,e.y)
@@ -24,6 +27,40 @@ def _transform_mouse_event(event_type,e,w):
     except AttributeError:
         pass
     return new_e
+
+
+def _transform_scroll_event(event: Gdk.EventScroll, widget: "Widget") -> "ScrollEvent":
+    x, y = widget.toWidgetCoords.transform_point(event.x, event.y)
+    if event.direction == Gdk.ScrollDirection.UP:
+        direction = ScrollEventDirection.UP
+    elif event.direction == Gdk.ScrollDirection.DOWN:
+        direction = ScrollEventDirection.DOWN
+    elif event.direction == Gdk.ScrollDirection.LEFT:
+        direction = ScrollEventDirection.LEFT
+    else:
+        direction = ScrollEventDirection.RIGHT
+
+    new_event = ScrollEvent(direction, x, y)
+    if event.state & Gdk.ModifierType.CONTROL_MASK:
+        new_event.modifiers.append('ctrl')
+    elif event.state & Gdk.ModifierType.SHIFT_MASK:
+        new_event.modifiers.append('shift')
+    return new_event
+
+class ScrollEventDirection(Enum):
+
+    UP = 0,
+    DOWN = 1,
+    LEFT = 2,
+    RIGHT = 3
+
+class ScrollEvent:
+
+    def __init__(self, direction: ScrollEventDirection, x: int, y: int):
+        self.x = x
+        self.y = y
+        self.direction = direction
+        self.modifiers = []
 
 class MouseButton(Enum):
 

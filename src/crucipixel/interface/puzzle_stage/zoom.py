@@ -1,6 +1,11 @@
+from typing import Callable
+
 import cairo
 
 from crucipixel.interface import global_constants
+from lightwidgets.animator import RepeatedAction
+from lightwidgets.events import MouseButton
+from lightwidgets.events import MouseEvent
 from lightwidgets.geometry import Point
 from lightwidgets.stock_widgets.buttons import BetterButton
 from lightwidgets.stock_widgets.containers import UncheckedContainer
@@ -8,6 +13,31 @@ from lightwidgets.stock_widgets.geometrical import DrawableRectangle
 from lightwidgets.stock_widgets.layout import SetAlignment, Alignment
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.widget import Widget
+
+class ZoomButton(BetterButton):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__zoom_action = None
+        self.action = lambda: None
+
+    def on_click(self, widget: "Widget", button: MouseButton):
+        pass
+
+    def on_mouse_up(self, widget: "Widget", event: MouseEvent):
+        if self.__zoom_action is not None:
+            self.__zoom_action.end = True
+        return super().on_mouse_up(widget, event)
+
+    def on_mouse_down(self, widget: "Widget", event: MouseEvent):
+        def action_return_true() -> Callable[[], bool]:
+            self.action()
+            return True
+        self.__zoom_action = RepeatedAction(action_return_true,
+                                            skip=6,
+                                            interval=100,
+                                            first=True).start()
+        return super().on_mouse_down(widget, event)
 
 
 class Zoom(UncheckedContainer):
@@ -18,12 +48,27 @@ class Zoom(UncheckedContainer):
 
         self.padding = padding
 
-        self.__plus_button = BetterButton("+", font_size, origin=BetterButton.LEFT)
-        self.__minus_button = BetterButton("‒", font_size, origin=BetterButton.LEFT)
-        # self.__minus_button = BetterButton("—", font_size, origin=BetterButton.LEFT)
+        self.__plus_button = ZoomButton("+", font_size, origin=BetterButton.LEFT)
+        self.__minus_button = ZoomButton("‒", font_size, origin=BetterButton.LEFT)
 
         self.add(self.__plus_button)
         self.add(self.__minus_button)
+
+    @property
+    def plus_action(self) -> Callable[[], None]:
+        return self.__plus_button.action
+
+    @plus_action.setter
+    def plus_action(self, action: Callable[[], None]):
+        self.__plus_button.action = action
+
+    @property
+    def minus_action(self) -> Callable[[], None]:
+        return self.__minus_button.action
+
+    @minus_action.setter
+    def minus_action(self, action: Callable[[], None]):
+        self.__minus_button.action = action
 
     def layout(self, context: cairo.Context):
         super().layout(context)
@@ -62,11 +107,14 @@ class Zoom(UncheckedContainer):
 def main():
     win = MainWindow("Test zoom")
     root = Root(200, 200)
+    zoom = Zoom()
+    zoom.plus_action = lambda: print("I'm a plus")
+    zoom.minus_action = lambda: print("I'm a minus")
     root.set_main_window(win)
     root.set_child(
         SetAlignment(
             SetAlignment(
-                Zoom(),
+                zoom,
                 Alignment.TOP
             ),
             Alignment.LEFT

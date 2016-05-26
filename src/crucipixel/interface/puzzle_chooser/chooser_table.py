@@ -548,24 +548,25 @@ class TableContents(Widget):
 
         curr_x = start_x
         curr_y = start_y - 1 + self.margin
-        line = table_extents[0]
-        for cell in line:
+        if self._how_many > 0:
+            line = table_extents[0]
+            for cell in line:
+                context.move_to(curr_x, curr_y)
+                context.line_to(curr_x, end_y)
+                context.stroke()
+                curr_x += cell.total_width + 2 * self.margin
             context.move_to(curr_x, curr_y)
             context.line_to(curr_x, end_y)
             context.stroke()
-            curr_x += cell.total_width + 2 * self.margin
-        context.move_to(curr_x, curr_y)
-        context.line_to(curr_x, end_y)
-        context.stroke()
 
-        if self._to_highlight is not None:
-            r, g, b = global_constants.highlight
-            context.set_source_rgba(r, g, b, .6)
-            index = self._to_highlight
-            base = start_y + table_extents.get_height_up_to(skip, index) + self.margin
-            h = table_extents.get_height_of(skip, how_many, index)
-            context.rectangle(start_x, base, table_extents.entries_width, h)
-            context.fill()
+            if self._to_highlight is not None:
+                r, g, b = global_constants.highlight
+                context.set_source_rgba(r, g, b, .6)
+                index = self._to_highlight
+                base = start_y + table_extents.get_height_up_to(skip, index) + self.margin
+                h = table_extents.get_height_of(skip, how_many, index)
+                context.rectangle(start_x, base, table_extents.entries_width, h)
+                context.fill()
 
 
         context.restore()

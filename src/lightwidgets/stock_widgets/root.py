@@ -11,7 +11,7 @@ from gi.repository import Gdk
 from gi.repository.Gdk import EventMask
 
 from lightwidgets.events import _transform_mouse_event,\
-    _transform_keyboard_event
+    _transform_keyboard_event, ScrollEvent, _transform_scroll_event
 # from gi.overrides.Gdk import Gdk
 from lightwidgets.geometry import Rectangle, Point
 from lightwidgets.stock_widgets.widget import Widget
@@ -25,12 +25,14 @@ class Root(Gtk.DrawingArea):
         events = Gdk.EventMask.BUTTON_PRESS_MASK\
                | Gdk.EventMask.BUTTON_RELEASE_MASK\
                | Gdk.EventMask.POINTER_MOTION_MASK\
+               | Gdk.EventMask.SCROLL_MASK\
                | Gdk.EventMask.KEY_PRESS_MASK\
                | Gdk.EventMask.KEY_RELEASE_MASK\
                | Gdk.EventMask.STRUCTURE_MASK
         self.add_events(events)
         self.set_can_focus(True)
         self.connect("draw", self.on_draw)
+        self.connect("scroll-event", self.on_scroll)
         self.connect("button-press-event", self.on_mouse_down)
         self.connect("button-release-event", self.on_mouse_up)
         self.connect("motion-notify-event", self.on_mouse_move)
@@ -106,7 +108,12 @@ class Root(Gtk.DrawingArea):
             context.restore()
     
     def _transform_mouse_event(self,event_type,e):
-        return _transform_mouse_event(event_type,e,self._child)
+        if self._child is not None:
+            return _transform_mouse_event(event_type,e,self._child)
+
+    def _transform_scroll_event(self, event: Gdk.EventScroll) -> ScrollEvent:
+        if self._child is not None:
+            return _transform_scroll_event(event, self._child)
     
     def on_mouse_down(self,w:"Gtk.Widget",e:"Gdk.EventButton"):
         self.mouse_is_down = True
@@ -121,6 +128,10 @@ class Root(Gtk.DrawingArea):
         if self._child is not None:
             self._child.on_mouse_up(self,self._transform_mouse_event("mouse_up", e))
         return True
+
+    def on_scroll(self, widget: Gtk.Widget, event: Gdk.EventScroll):
+        if self._child is not None:
+            self._child.on_scroll(self._transform_scroll_event(event))
 
     def on_mouse_move(self,w:"Gtk.Widget",e:"Gdk.EventMotion"):
         if self._child is not None:

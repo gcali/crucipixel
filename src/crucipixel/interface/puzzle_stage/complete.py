@@ -10,6 +10,7 @@ import cairo
 from crucipixel.data.json_parser import parse_file_name
 from crucipixel.interface.puzzle_stage.buttons import GridButtons
 from crucipixel.interface.puzzle_stage.navigator import Navigator
+from crucipixel.interface.puzzle_stage.zoom import Zoom
 from crucipixel.logic import core
 from lightwidgets.events import KeyboardEvent, MouseEvent, MouseButton
 from lightwidgets.geometry import Point
@@ -116,25 +117,18 @@ class CompleteCrucipixel(UncheckedContainer):
         self.grid.is_destroyed = value
 
     def on_key_down(self, w, e):
+        print("I was a key down!", e.key, e.modifiers)
         if e.key == "=" or e.key == "+":
             self.zoom_in()
             return True
         elif e.key == "-":
             self.zoom_out()
             return True
-        elif e.key in self._movement and "shift" in e.modifiers:
-            self._handle_movement(self._movement[e.key])
         else:
             super().on_key_down(w,e)
 
     def on_key_up(self, w, e):
-        if e.key in self._movement and "shift" in e.modifiers:
-            self._stop_movement(self._movement[e.key])
-        elif e.key.startswith("shift"):
-            for m in self._movement.values():
-                self._stop_movement(m)
-        else:
-            return super().on_key_up(w,e)
+        return super().on_key_up(w,e)
 
     def zoom_in(self):
         self.scale(1.5,1.5)
@@ -143,51 +137,6 @@ class CompleteCrucipixel(UncheckedContainer):
     def zoom_out(self):
         self.scale((1/1.5),(1/1.5))
         self.invalidate()
-
-    def _handle_movement(self,direction:"str"):
-        def get_direction(direction):
-            if direction == "left":
-                coeff = Point(1,0)
-            elif direction == "right":
-                coeff = Point(-1,0)
-            elif direction == "up":
-                coeff = Point(0,1)
-            elif direction == "down":
-                coeff = Point(0,-1)
-            else:
-                raise NameError("Can't find direction", direction)
-            return coeff
-        if direction not in self._direction_animations:
-            coeff = Point(0,0)
-            for d in direction.split("_"):
-                coeff += get_direction(d)
-#             acc = Point(500 * coeff.x,
-#                         500 * coeff.y)
-            acc = Point(0,0)
-            start_speed = Point(500 * coeff.x,
-                                500 * coeff.y)
-            store_pos = Bunch(v=Point(0,0))
-            def assign(d):
-                store_pos.v += d
-                delta = Point(int(store_pos.v.x),
-                              int(store_pos.v.y))
-                store_pos.v -= delta
-                self.translate(delta.x, delta.y)
-            animation = AccMovement(assign=assign,
-                                    acc=acc,
-                                    start_position=Point(0,0),
-                                    duration=0,
-                                    start_speed=start_speed)
-            animation.widget = self
-            self._direction_animations[direction] = animation
-            global_constants.global_animator.add_animation(animation)
-
-    def _stop_movement(self,direction:"str"):
-        try:
-            self._direction_animations[direction].stop = True
-            del self._direction_animations[direction]
-        except KeyError:
-            pass
 
     def move(self,offset_x=0,offset_y=0):
         self.translate(offset_x,offset_y)
@@ -223,9 +172,11 @@ class PuzzleScreen(UncheckedContainer):
         self._click_point = Point(0,0)
         self.navigator = None
         self.buttons = None
+        self.zoom = None
 
     def start_all(self, crucipixel: core.Crucipixel):
         self.start_crucipixel(crucipixel)
+        self.start_zoom()
         self.start_selector()
         # self.start_navigator()
         self.start_buttons()
@@ -296,8 +247,20 @@ class PuzzleScreen(UncheckedContainer):
         self.crucipixel = CompleteCrucipixel(crucipixel, start, cell_size)
         self.crucipixel.ID="CompleteCrucipixel"
         self.grid = CrucipixelGridWonWrapper(self.crucipixel.grid, crucipixel)
+        self.grid.visible = False
         self.add(self.crucipixel)
         self.add(self.grid)
+
+    def start_zoom(self):
+        self.zoom = Zoom()
+        self.zoom.plus_action = lambda: (self.crucipixel.zoom_in())
+        self.zoom.minus_action = lambda: (self.crucipixel.zoom_out())
+        self.add(
+            SetAlignment(
+                SetAlignment(self.zoom, Alignment.BOTTOM),
+                Alignment.LEFT
+            )
+        )
 
     def on_mouse_down(self, widget, event: MouseEvent):
         handled = self.grid.visible

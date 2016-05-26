@@ -17,6 +17,17 @@ from lightwidgets.stock_widgets.geometrical import DrawableRectangle
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.widget import Widget
 
+class BlankOverlay(UncheckedContainer):
+
+    def __init__(self,
+                 start_rgba: Tuple[Number, Number, Number, Number],
+                 end_rgba: Tuple[Number, Number, Number, Number]):
+
+        self.level = 0
+        self.start = start_rgba
+        self.end = end_rgba
+
+
 
 class TextOverlay(Widget):
 
@@ -199,6 +210,9 @@ class ButtonedTextOverlay(UncheckedContainer):
         context.move_to(self.__label_start.x, self.__label_start.y)
         context.show_text(self.label)
         super().on_draw(widget, context)
+
+    def is_point_in(self, p: "Point", category=MouseEvent.UNKNOWN):
+        return self.visible
 
     def on_mouse_down(self, widget: Widget, event: MouseEvent):
         super().on_mouse_down(widget, event)
