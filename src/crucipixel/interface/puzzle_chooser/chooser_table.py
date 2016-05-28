@@ -11,11 +11,14 @@ import itertools
 from crucipixel.data.crucipixel_scheme import CrucipixelScheme
 from crucipixel.data.json_parser import parse_file_name
 from crucipixel.interface import global_constants
-from lightwidgets.events import MouseEvent, MouseButton
+from lightwidgets.events import MouseEvent, MouseButton, ScrollEvent, \
+    ScrollEventDirection
 from lightwidgets.geometry import Rectangle, Point
 from lightwidgets.stock_widgets.arrow import Arrow
 from lightwidgets.stock_widgets.buttons import Button, BetterButton
 from lightwidgets.stock_widgets.containers import UncheckedContainer
+from lightwidgets.stock_widgets.geometrical import DrawableRectangle, \
+    DrawableRoundedRectangle
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.widget import Widget
 
@@ -223,6 +226,9 @@ class TableNavigator(UncheckedContainer):
         self.up_pos = up_pos
         self.down_pos = down_pos
 
+        self.skip = 0
+        self.fill = 1
+
         self.add(self._up_arrow)
         self.add(self._down_arrow)
 
@@ -267,11 +273,49 @@ class TableNavigator(UncheckedContainer):
             - self._up_offset + value
         )
 
+    def on_scroll(self, event: ScrollEvent):
+        super().on_scroll(event)
+        if event.direction == ScrollEventDirection.UP:
+            self._up_arrow.action()
+        elif event.direction == ScrollEventDirection.DOWN:
+            self._down_arrow.action()
+        # self.invalidate()
+
+
     def on_draw(self,widget,context):
-        if self._down_pos - self.height  <= self._up_pos:
+        if self._down_pos - self.height <= self._up_pos:
             pass
         else:
+            context.save()
             super().on_draw(widget, context)
+            if self.skip + self.fill <= 1:
+                up = self._up_pos + self._up_offset * 2 + 3
+                down = self._down_pos - self._up_offset * 2 - 3
+                if up >= down:
+                    up -= 2
+                    down += 2
+                if up < down:
+                    height = down - up
+                    bar_width = self.width/6
+                    intensity = .2
+                    context.set_source_rgb(intensity, intensity, intensity)
+                    rectangle = DrawableRoundedRectangle(
+                        Point(
+                            self._left_offset - bar_width,
+                            up + self.skip * height
+                        ),
+                        2*bar_width,
+                        max(height * self.fill, 1.5)
+                    )
+                    # context.rectangle(
+                    #     self._left_offset - bar_width,
+                    #     up + self.skip * height,
+                    #     2*bar_width,
+                    #     max(height * self.fill, 1.5)
+                    # )
+                    rectangle.draw_on_context(context)
+                    context.fill()
+            context.restore()
 
 
 class TableContents(Widget):
@@ -285,6 +329,7 @@ class TableContents(Widget):
         self._font_size = 20
         self.margin = 4
         self._skip = 0
+        self.base = 0
         self._how_many = len(entries)
         self._shown = self._how_many
         self._table_extents = None
@@ -475,6 +520,7 @@ class TableContents(Widget):
 
         how_many = up_to - base
         skip = base
+        self.base = base
 
         entries = self.entries[skip:skip + how_many]
 
@@ -648,6 +694,10 @@ class ChooserTable(UncheckedContainer):
         self.contents.set_max_size(width, height)
         self.contents.on_draw(widget, context)
         offset = self.contents.table_width + navigator_margin
+        tot = len(self.contents.entries)
+        print(tot, self.contents.base, self.contents._shown)
+        self.navigator.skip = self.contents.base / tot
+        self.navigator.fill = self.contents._shown / tot
         self.navigator.translate(offset, 0)
         context.translate(offset, 0)
         self.navigator.down_pos = self.contents.table_height

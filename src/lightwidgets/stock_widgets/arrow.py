@@ -5,7 +5,7 @@ from gi.overrides import GLib
 
 from lightwidgets import geometry
 from lightwidgets.events import MouseEvent, MouseButton
-from lightwidgets.geometry import Point
+from lightwidgets.geometry import Point, Rectangle
 from lightwidgets.stock_widgets.containers import UncheckedContainer
 from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.widget import Widget
@@ -61,8 +61,14 @@ class Arrow(Widget):
         c.restore()
 
     def is_point_in(self,p: Point,category=MouseEvent.UNKNOWN):
-        a, b, c = self._vertexes
-        return geometry.is_point_inside_triangle(p, a, b, c)
+        v = self._vertexes
+        start = Point(min(x.x for x in v), min(x.y for x in v))
+        width = max(x.x for x in v) - start.x
+        height = max(x.y for x in v) - start.y
+        rectangle = Rectangle(start, width, height)
+        return rectangle.is_point_in(p)
+        # a, b, c = self._vertexes
+        # return geometry.is_point_inside_triangle(p, a, b, c)
 
 
 class KeepPressingArrow(Arrow):

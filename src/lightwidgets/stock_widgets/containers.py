@@ -9,7 +9,8 @@ import cairo
 
 from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.geometry import Point, Rectangle
-from lightwidgets.events import MouseEvent, KeyboardEvent, MouseEventCategory
+from lightwidgets.events import MouseEvent, KeyboardEvent, MouseEventCategory, \
+    ScrollEvent
 
 
 def _transform_point(widget: Widget, point: Point):
@@ -106,6 +107,13 @@ class Container(Widget):
                                         event,
                                         take_on_mouse_down,
                                         MouseEvent.MOUSE_DOWN)
+
+    def on_scroll(self, event: ScrollEvent):
+        for child in reversed(list(self.list)):
+            p = _transform_point(child, event)
+            if child.on_scroll(ScrollEvent(event.direction, p.x, p.y)):
+                return True
+        return False
     
     def on_mouse_up(self, widget: Widget, event: MouseEvent):
         super().on_mouse_up(widget, event)

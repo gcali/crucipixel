@@ -40,7 +40,7 @@ class CustomDebug(WidgetDebug):
 
 def create_new_game(root: Root) -> None:
     def new_game() -> None:
-        models = storage.get_models()
+        models = sorted(storage.get_models(), key=lambda m: (len(m.scheme.rows) * len(m.scheme.cols)))
         chooser = ChooserTable([scheme_to_entry(model.scheme)
                                 for model in models])
         chooser.set_contents_callback(create_load_model(root, models))

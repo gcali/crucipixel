@@ -5,7 +5,7 @@ import cairo
 from gi.overrides.Gtk import Gtk
 from gi.repository import Gdk
 
-from lightwidgets.events import MouseEvent
+from lightwidgets.events import MouseEvent, ScrollEvent, ScrollEventDirection
 from lightwidgets.geometry import Point
 from lightwidgets.stock_widgets.buttons import BetterButton, \
     click_left_button_wrapper
@@ -148,9 +148,12 @@ class HelpScreen(UncheckedContainer):
         self.__click_y = None
         self.__translation = 0
 
-    def __get_translation(self, y: int) -> int:
+    def __clamp_translation(self, y: int):
         mini = min(0, self.father.container_size[1] -self.__help_window.shape.height)
-        return max(min(self.__translation - self.__click_y + y, 0), mini)
+        return max(min(y, 0), mini)
+
+    def __get_translation(self, y: int) -> int:
+        return self.__clamp_translation(self.__translation - self.__click_y + y)
 
     def set_back_action(self, action: Callable[[], None]):
         self.__back_button.on_click_action = click_left_button_wrapper(action)
@@ -162,6 +165,7 @@ class HelpScreen(UncheckedContainer):
         super().on_mouse_up(widget, event)
         self.__translation = self.__get_translation(event.y)
         self.__click_y = None
+        self.invalidate()
 
     def on_mouse_down(self, widget: Widget, event: MouseEvent):
         super().on_mouse_down(widget, event)
@@ -173,6 +177,20 @@ class HelpScreen(UncheckedContainer):
             self.__help_window.set_translate(0, self.__get_translation(event.y))
             self.invalidate()
 
+    def on_scroll(self, event: ScrollEvent):
+        super().on_scroll(event)
+        if self.__click_y is None:
+            # self.__click_y = 0
+            step = 30
+            base = self.__translation
+            if event.direction == ScrollEventDirection.UP:
+                self.__translation = self.__clamp_translation(base + step)
+                self.__help_window.set_translate(0, self.__translation)
+            elif event.direction == ScrollEventDirection.DOWN:
+                self.__translation = self.__clamp_translation(base - step)
+                self.__help_window.set_translate(0, self.__translation)
+            self.invalidate()
+
     @property
     def container_size(self) -> Tuple[int, int]:
         old_width, old_height = super().container_size
@@ -181,6 +199,9 @@ class HelpScreen(UncheckedContainer):
     def layout(self, context: cairo.Context):
         super().layout(context)
         self.__back_button.set_translate(self.father.container_size[0] - 10, 10)
+
+    def on_draw(self, widget: Widget, context: cairo.Context):
+        super().on_draw(widget, context)
 
 def main():
 
