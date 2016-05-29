@@ -675,8 +675,14 @@ class ChooserTable(UncheckedContainer):
         self.contents.on_draw(widget, context)
         offset = self.contents.table_width + navigator_margin
         tot = len(self.contents.entries)
-        self.navigator.skip = self.contents.base / tot
-        self.navigator.fill = self.contents._shown / tot
+        if tot != 0:
+            self.navigator.skip = self.contents.base / tot
+        else:
+            self.navigator.skip = 0
+        if tot != 0:
+            self.navigator.fill = self.contents._shown / tot
+        else:
+            self.navigator.fill = 1
         self.navigator.translate(offset, 0)
         context.translate(offset, 0)
         self.navigator.down_pos = self.contents.table_height
