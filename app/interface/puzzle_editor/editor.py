@@ -1,9 +1,9 @@
 from typing import Callable
 
-from crucipixel.interface.puzzle_editor.buttons import EditorButtons
-from crucipixel.interface.puzzle_stage.grid import CrucipixelGrid
-from crucipixel.interface.puzzle_stage.selector import BetterSelector
-from crucipixel.logic import core
+from app.interface.puzzle_editor.buttons import EditorButtons
+from app.interface.puzzle_stage.grid import CrucipixelGrid
+from app.interface.puzzle_stage.selector import BetterSelector
+from app.logic import core
 from lightwidgets.events import MouseEvent
 from lightwidgets.geometry import Point
 from lightwidgets.stock_widgets.containers import UncheckedContainer

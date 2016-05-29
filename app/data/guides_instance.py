@@ -1,6 +1,6 @@
 from typing import Iterable, Tuple
 
-from crucipixel.interface.puzzle_stage.guides import Orientation
+from app.interface.puzzle_stage.guides import Orientation
 
 
 class GuidesInstance:

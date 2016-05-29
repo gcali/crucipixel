@@ -1,8 +1,8 @@
 from typing import Tuple, List
 
-from crucipixel.data.crucipixel_instance import CrucipixelInstance
-from crucipixel.data.crucipixel_scheme import CrucipixelScheme
-from crucipixel.data.guides_instance import GuidesInstance
+from app.data.crucipixel_instance import CrucipixelInstance
+from app.data.crucipixel_scheme import CrucipixelScheme
+from app.data.guides_instance import GuidesInstance
 
 
 class CrucipixelCompleteModel:

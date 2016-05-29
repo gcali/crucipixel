@@ -92,7 +92,7 @@ class CrucipixelInstance:
 
     def make_move(self, atoms: Iterable[MoveAtom]):
         """
-        Commits a unit of moves to the instance of the crucipixel
+        Commits a unit of moves to the instance of the app
 
         Args:
             atoms: a sequence of moves, interpreted as a single unit

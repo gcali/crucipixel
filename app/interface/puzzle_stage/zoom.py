@@ -2,7 +2,7 @@ from typing import Callable
 
 import cairo
 
-from crucipixel.interface import global_constants
+from app.interface import global_constants
 from lightwidgets.animator import RepeatedAction
 from lightwidgets.events import MouseButton
 from lightwidgets.events import MouseEvent

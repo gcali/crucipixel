@@ -7,7 +7,7 @@ from typing import Tuple, Callable, Iterable
 
 import cairo
 
-from crucipixel.interface import global_constants
+from app.interface import global_constants
 from lightwidgets.stock_widgets.containers import UncheckedContainer
 
 from lightwidgets.stock_widgets.root import MainWindow, Root

@@ -7,14 +7,14 @@ import random
 from itertools import zip_longest
 from typing import Iterable, Tuple, List
 
-from crucipixel.data.complete_model import CrucipixelCompleteModel
-from crucipixel.data.crucipixel_instance import MoveAtom, CrucipixelCellValue, \
+from app.data.complete_model import CrucipixelCompleteModel
+from app.data.crucipixel_instance import MoveAtom, CrucipixelCellValue, \
     CrucipixelInstance
-from crucipixel.data.crucipixel_scheme import CrucipixelScheme
-from crucipixel.data.guides_instance import GuidesInstance
-from crucipixel.data.json_parser import parse_file_name
-from crucipixel.data.storage import save_model, get_default_path_from_title
-from crucipixel.interface.puzzle_stage.guides import Orientation
+from app.data.crucipixel_scheme import CrucipixelScheme
+from app.data.guides_instance import GuidesInstance
+from app.data.json_parser import parse_file_name
+from app.data.storage import save_model, get_default_path_from_title
+from app.interface.puzzle_stage.guides import Orientation
 
 
 class Crucipixel:
@@ -43,7 +43,7 @@ class Crucipixel:
 
     def make_move(self, atoms: Iterable[MoveAtom]):
         """
-        Commits a unit of moves to the instance of the crucipixel
+        Commits a unit of moves to the instance of the app
 
         Args:
             atoms: a sequence of moves, interpreted as a single unit

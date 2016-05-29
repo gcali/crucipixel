@@ -1,6 +1,6 @@
 from typing import Callable
 
-from crucipixel.interface import global_constants
+from app.interface import global_constants
 from lightwidgets.stock_widgets.buttons import click_left_button_wrapper, \
     OrderedButtons
 from lightwidgets.stock_widgets.layout import SetAlignment, Alignment

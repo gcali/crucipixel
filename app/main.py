@@ -8,18 +8,18 @@ from typing import List, Callable
 from gi.overrides.Gtk import Gtk
 from gi.repository import Gdk
 
-from crucipixel.data import json_parser, storage
-from crucipixel.data.complete_model import CrucipixelCompleteModel
-from crucipixel.interface import global_constants
-from crucipixel.interface.help.help_screen import HelpScreen
-from crucipixel.interface.main_menu import BetterMainMenu
-from crucipixel.interface.puzzle_chooser.chooser_table import ChooserTable, \
+from app.data import json_parser, storage
+from app.data.complete_model import CrucipixelCompleteModel
+from app.interface import global_constants
+from app.interface.help.help_screen import HelpScreen
+from app.interface.main_menu import BetterMainMenu
+from app.interface.puzzle_chooser.chooser_table import ChooserTable, \
     scheme_to_entry
-from crucipixel.interface.puzzle_editor.editor import EditorScreen
-from crucipixel.interface.puzzle_editor.input import EditorInput
-from crucipixel.interface.puzzle_stage.complete import PuzzleScreen
-from crucipixel.logic import core
-from crucipixel.logic.core import CrucipixelEditor
+from app.interface.puzzle_editor.editor import EditorScreen
+from app.interface.puzzle_editor.input import EditorInput
+from app.interface.puzzle_stage.complete import PuzzleScreen
+from app.logic import core
+from app.logic.core import CrucipixelEditor
 from lightwidgets.debug import WidgetDebug
 from lightwidgets.stock_widgets.buttons import click_left_button_wrapper
 from lightwidgets.stock_widgets.layout import Border, Alignment

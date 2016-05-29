@@ -16,7 +16,7 @@ from lightwidgets.stock_widgets.geometrical import DrawableRoundedRectangle, \
     DrawableRectangle
 from lightwidgets.events import MouseEvent, MouseButton
 import math
-from crucipixel.interface import global_constants
+from app.interface import global_constants
 from lightwidgets.stock_widgets.root import MainWindow
 from lightwidgets.stock_widgets.root import Root
 from lightwidgets.stock_widgets.widget import Widget

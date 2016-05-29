@@ -9,12 +9,12 @@ from typing import Tuple, Iterable, Callable
 import cairo
 from gi.repository import GLib
 
-from crucipixel.data.crucipixel_instance import CrucipixelCellValue, MoveAtom
-from crucipixel.data.json_parser import parse_file_name
-from crucipixel.interface import global_constants
-from crucipixel.interface.puzzle_stage.guides import Orientation, GuideStatus
-from crucipixel.interface.puzzle_stage.navigator import Direction
-from crucipixel.logic import core
+from app.data.crucipixel_instance import CrucipixelCellValue, MoveAtom
+from app.data.json_parser import parse_file_name
+from app.interface import global_constants
+from app.interface.puzzle_stage.guides import Orientation, GuideStatus
+from app.interface.puzzle_stage.navigator import Direction
+from app.logic import core
 from lightwidgets.events import MouseEvent, MouseButton, KeyboardEvent
 from lightwidgets.geometry import Point, Rectangle
 from lightwidgets.stock_widgets.containers import UncheckedContainer
@@ -527,7 +527,7 @@ class CrucipixelGridWonWrapper(UncheckedContainer):
         #         self.grid.victory_screen = False
         #     else:
         #         self.grid.victory_screen = True
-        # crucipixel.on_won_change_callbacks_list.append(on_won_change)
+        # app.on_won_change_callbacks_list.append(on_won_change)
 
     def on_draw(self, widget: "Widget", context: cairo.Context):
         width, height = self.container_size
@@ -551,7 +551,7 @@ def main() -> int:
     main_window = MainWindow(title="Prova")
     main_window.add(root)
 
-    crucipixel_model = parse_file_name("/home/giovanni/.crucipixel/monopattino.json")
+    crucipixel_model = parse_file_name("/home/giovanni/.app/monopattino.json")
     crucipixel_core = core.Crucipixel(crucipixel_model)
     crucipixel_core.make_move((MoveAtom(i, i, CrucipixelCellValue.SELECTED) for i in range(5)))
     grid = CrucipixelGrid(crucipixel_core)

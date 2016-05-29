@@ -1,6 +1,6 @@
 from enum import Enum, unique
 
-from crucipixel.interface import global_constants
+from app.interface import global_constants
 from lightwidgets.events import MouseEvent
 from lightwidgets.geometry import Rectangle, Point
 from lightwidgets.stock_widgets.arrow import Arrow

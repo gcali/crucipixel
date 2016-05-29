@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+CRUCIPATH="$(dirname $0)"
+
+python3.5 "$CRUCIPATH/crucipixel.py"

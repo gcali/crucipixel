@@ -1,11 +1,11 @@
 import os, glob, re
 from typing import List
 
-from crucipixel.data import json_parser
-from crucipixel.data.complete_model import CrucipixelCompleteModel
-from crucipixel.data.crucipixel_scheme import CrucipixelScheme
-from crucipixel.data.json_parser import encode_model
-from crucipixel.options import Options
+from app.data import json_parser
+from app.data.complete_model import CrucipixelCompleteModel
+from app.data.crucipixel_scheme import CrucipixelScheme
+from app.data.json_parser import encode_model
+from app.options import Options
 
 
 

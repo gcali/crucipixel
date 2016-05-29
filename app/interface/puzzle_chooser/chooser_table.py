@@ -8,9 +8,9 @@ from typing import List, Tuple, Iterable, Callable
 import cairo
 import itertools
 
-from crucipixel.data.crucipixel_scheme import CrucipixelScheme
-from crucipixel.data.json_parser import parse_file_name
-from crucipixel.interface import global_constants
+from app.data.crucipixel_scheme import CrucipixelScheme
+from app.data.json_parser import parse_file_name
+from app.interface import global_constants
 from lightwidgets.events import MouseEvent, MouseButton, ScrollEvent, \
     ScrollEventDirection
 from lightwidgets.geometry import Rectangle, Point

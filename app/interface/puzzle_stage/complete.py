@@ -7,11 +7,11 @@ import copy
 
 import cairo
 
-from crucipixel.data.json_parser import parse_file_name
-from crucipixel.interface.puzzle_stage.buttons import GridButtons
-from crucipixel.interface.puzzle_stage.navigator import Navigator
-from crucipixel.interface.puzzle_stage.zoom import Zoom
-from crucipixel.logic import core
+from app.data.json_parser import parse_file_name
+from app.interface.puzzle_stage.buttons import GridButtons
+from app.interface.puzzle_stage.navigator import Navigator
+from app.interface.puzzle_stage.zoom import Zoom
+from app.logic import core
 from lightwidgets.events import KeyboardEvent, MouseEvent, MouseButton
 from lightwidgets.geometry import Point
 from gi.repository import Gdk
@@ -23,12 +23,12 @@ from lightwidgets.stock_widgets.root import MainWindow, Root
 from lightwidgets.stock_widgets.widget import Widget
 from lightwidgets.support import Bunch
 from lightwidgets.animator import AccMovement
-from crucipixel.interface import global_constants
-from crucipixel.interface.puzzle_stage.guides import Guides, BetterGuide, \
+from app.interface import global_constants
+from app.interface.puzzle_stage.guides import Guides, BetterGuide, \
     Orientation, GuideStatus
-from crucipixel.interface.puzzle_stage.grid import CrucipixelGrid, \
+from app.interface.puzzle_stage.grid import CrucipixelGrid, \
     CrucipixelGridWonWrapper
-from crucipixel.interface.puzzle_stage.selector import Selector, BetterSelector
+from app.interface.puzzle_stage.selector import Selector, BetterSelector
 from lightwidgets.stock_widgets.containers import UncheckedContainer
 
 
@@ -56,9 +56,9 @@ class CompleteCrucipixel(UncheckedContainer):
         # def on_won_change(value: bool):
         #     self.horizontal_guide.visible = not value
         #     self.vertical_guide.visible = not value
-        # crucipixel.on_won_change_callbacks_list.append(on_won_change)
-        # self.horizontal_guide.visible = not crucipixel.is_won
-        # self.vertical_guide.visible = not crucipixel.is_won
+        # app.on_won_change_callbacks_list.append(on_won_change)
+        # self.horizontal_guide.visible = not app.is_won
+        # self.vertical_guide.visible = not app.is_won
         self.add(self.horizontal_guide)
         self.add(self.vertical_guide)
 

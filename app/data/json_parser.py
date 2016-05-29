@@ -6,11 +6,11 @@ from time import sleep
 from typing import List, IO, Tuple
 import json
 
-from crucipixel.data.complete_model import CrucipixelCompleteModel
-from crucipixel.data.crucipixel_instance import CrucipixelInstance
-from crucipixel.data.crucipixel_scheme import CrucipixelScheme
-from crucipixel.data.guides_instance import GuidesInstance
-from crucipixel.interface.puzzle_stage.guides import Orientation
+from app.data.complete_model import CrucipixelCompleteModel
+from app.data.crucipixel_instance import CrucipixelInstance
+from app.data.crucipixel_scheme import CrucipixelScheme
+from app.data.guides_instance import GuidesInstance
+from app.interface.puzzle_stage.guides import Orientation
 
 
 class MyEncoder(JSONEncoder):
@@ -75,5 +75,5 @@ if __name__ == '__main__':
         with open("../data/" + name, "r") as f:
             scheme = CrucipixelScheme.from_json_object(json.load(f))
             model = CrucipixelCompleteModel(scheme, [])
-            # with open(os.path.expanduser("~") + "/" + ".crucipixel/" + name, "w") as fw:
+            # with open(os.path.expanduser("~") + "/" + ".app/" + name, "w") as fw:
             #     print(encode_model(model), file=fw)

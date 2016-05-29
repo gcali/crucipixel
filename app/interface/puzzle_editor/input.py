@@ -3,8 +3,8 @@ from typing import Callable, Tuple
 
 import cairo
 
-from crucipixel.interface import global_constants
-from crucipixel.logic import core
+from app.interface import global_constants
+from app.logic import core
 from lightwidgets.animator import RepeatedAction
 from lightwidgets.events import MouseButton, MouseEvent, KeyboardEvent
 from lightwidgets.geometry import Point, Rectangle
