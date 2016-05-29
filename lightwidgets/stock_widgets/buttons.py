@@ -208,21 +208,17 @@ class Button(Widget):
         if (not self.force_clip_not_set) and not self.is_clip_set():
             self.clip_rectangle = self._shape
             
-#         print(xb,yb,width,height)
         start_x = (self.size.x - width)/2 + xb
         start_y = (self.size.y - height)/2 - yb
-#         print(start_x, start_y)
         c.move_to(start_x,start_y)
         c.set_source_rgb(*self.label_color)
         c.show_text(self.label)
         c.restore()
     
     def on_mouse_down(self, w, e):
-        print("I've been called!")
         super().on_mouse_down(w, e)
         self._button_mouse_was_down = True
-        print(self)
-    
+
     def on_mouse_up(self, w, e):
         super().on_mouse_up(w,e)
         if not self.on_mouse_up_broadcast is None:

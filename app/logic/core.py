@@ -150,15 +150,12 @@ class Crucipixel:
             #     callback(value)
 
     def _check_if_won(self):
-        print(self.number_of_rows, self.number_of_cols)
         for line in range(self.number_of_rows):
-            print("Line", line)
             if (not self.is_line_full(Orientation.HORIZONTAL, line)) or\
                     self.is_line_wrong(Orientation.HORIZONTAL, line):
                 self.is_won = False
                 return
         for col in range(self.number_of_cols):
-            print("Col", col)
             if (not self.is_line_full(Orientation.VERTICAL, col)) or \
                     self.is_line_wrong(Orientation.VERTICAL, col):
                 self.is_won = False
@@ -232,7 +229,6 @@ class CrucipixelEditor(Crucipixel):
         scheme = CrucipixelScheme(self.title, rows, cols, self.hard)
         model = CrucipixelCompleteModel(scheme, [])
         model.file_name_complete = file_name
-        print(file_name)
         save_model(model)
 
     def load(self):

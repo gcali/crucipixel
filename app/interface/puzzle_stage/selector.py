@@ -58,7 +58,6 @@ class BetterSelector(UncheckedContainer):
         self._handle_layout()
 
     def set_click_action(self, index: int, action: Callable[[MouseButton], None]):
-        print("Setting selector for:", index)
         self._buttons[index].on_click_action = action
 
     def _handle_layout(self):

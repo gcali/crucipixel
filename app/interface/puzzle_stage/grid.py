@@ -361,14 +361,11 @@ class CrucipixelGrid(Widget):
         return True
 
     def on_mouse_up(self, widget: "Widget", event: MouseEvent) -> bool:
-        print(self._highlight_row, self._highlight_col)
         self._end_selection()
-        print(self._highlight_row, self._highlight_col)
         return False
 
     def on_key_down(self, widget: "Widget", event: KeyboardEvent) -> bool:
         super().on_key_down(widget, event)
-        print("viva viva")
 
         if event.key in self._keyboard_value_to_crucipixel_cell_value:
             is_there_one = False

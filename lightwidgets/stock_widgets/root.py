@@ -53,16 +53,12 @@ class Root(Gtk.DrawingArea):
     
     @child.setter
     def child(self, value):
-        print("My child is now {}".format(str(value)))
         self._child = value
         value.father = self
         try:
-            print("Did it have a min size?")
             size_x, size_y = value.min_size
-            print("New size!", size_x, size_y)
             self.set_min_size(size_x, size_y)
-        except AttributeError as e:
-            print("No it didn't!", e)
+        except AttributeError:
             pass
 
     @property
@@ -161,7 +157,6 @@ class Root(Gtk.DrawingArea):
     def register_signal_for_child(self,signal_name,widget):
         try:
             self._lw_signals[signal_name].append(widget)
-#             print("I existed!")
         except KeyError:
             self._lw_signals[signal_name] = []
             return self.register_signal_for_child(signal_name, widget)
@@ -172,7 +167,7 @@ class Root(Gtk.DrawingArea):
                 w.handle_signal(signal_name,*args)
         except KeyError as e:
             print("Signal not found: {}".format(signal_name))
-    
+
     def register_switch_to(self, signal_name:"str", widget:"Widget"):
         return self._switcher.register_switch_to(signal_name, widget)
 
@@ -204,6 +199,5 @@ class MainWindow(Gtk.Window):
         return Gtk.main()
 
     def set_background_rgba(self, r: Number, g: Number, b: Number, a: Number):
-        print(Gdk.RGBA)
         self.override_background_color(Gtk.StateFlags.NORMAL,
                                        Gdk.RGBA(r, g, b, a))

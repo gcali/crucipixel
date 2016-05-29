@@ -50,7 +50,6 @@ class Navigator(UncheckedContainer):
         return False
 
     def on_mouse_enter(self) -> bool:
-        print(self.mouse_is_down)
         if self.mouse_is_down:
             self._should_pass_move = True
         return super().on_mouse_enter()
