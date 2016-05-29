@@ -45,7 +45,6 @@ class BetterMainMenu(UncheckedContainer):
 
     def set_callback(self, index: int, callback: Callable[[MouseButton], None]):
         self._buttons[index].on_click_action = callback
-        print("Set for", index)
 
     def on_resize(self,new_father_dim):
         self.invalidate()

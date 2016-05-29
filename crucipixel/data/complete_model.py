@@ -11,8 +11,6 @@ class CrucipixelCompleteModel:
                  instances: List[Tuple[CrucipixelInstance, GuidesInstance]]):
         self.scheme = scheme
         if instances:
-            print("Instances!")
-            print(instances)
             self.instances = instances
         else:
             self.instances = [

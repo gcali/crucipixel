@@ -111,7 +111,6 @@ class _TableExtents:
         self._calc_size()
 
     def get_height_up_to(self, skip: int, how_many: int) -> int:
-        # print("Skip!", skip, how_many, len(self._heights))
         return sum(self._heights[skip: skip + how_many])
 
     def get_height_of(self, skip: int, how_many: int, index: int) -> int:
@@ -145,16 +144,12 @@ class _TableExtents:
                 max_width[index] = max(max_width[index], cell.total_width)
 
         for i, line in enumerate(line_extents):
-            # print("Line", i)
             for new_width, cell in zip(max_width, line):
-                # print("-> Cell", cell, new_width)
                 cell.calculate_padding(new_width)
-                # print("-> New Cell", cell)
 
         total_width = 0
         for value in max_width:
             total_width += value + 2 * margin
-        # print("Total width:", total_width)
 
         self.entries_width = total_width
         self._heights = heights[1:]
@@ -420,8 +415,6 @@ class TableContents(Widget):
         )
 
         width = extents.total_width
-        # print("Width: {} Max: {}".format(width, self._max_width))
-        # if width > self._max_width:
         left_start = extents.get_cell_data_left(1)
         first_width = self._max_width - width + left_start - self.margin * 4
         first_width = max(first_width, min_first_width)
@@ -434,7 +427,6 @@ class TableContents(Widget):
 
     def _update_table_extents(self, context: cairo.Context,
                               max_width:int = None):
-        # print("Updating!")
 
         title_extents = self._get_line_extents([e for e in self.title], context)
         self._table_extents = _TableExtents(
@@ -550,17 +542,11 @@ class TableContents(Widget):
         curr_x, curr_y = start_x, start_y# + title_extents.total_height
 
         for line_index, (line_extent, entry) in enumerate(zip(table_extents_iterator(), entries)):
-            # print("Handling", entry[0])
             h = line_extent.total_height
             curr_y += h
-            # how_many = line_index
-            # print("Line index:", how_many)
             if curr_y + self.margin >= self._max_height:
-                # print("I'm breaking at", how_many)
-                # print("Max height:", self._max_height)
                 break
             for (cell_index, cell), data in zip(enumerate(line_extent), entry):
-                # print("->", data, cell)
                 context.save()
                 offset = line_extent.get_cell_data_left(cell_index)
                 context.rectangle(curr_x + offset, curr_y - h, cell.width, 2*h)
@@ -571,9 +557,6 @@ class TableContents(Widget):
                 )
                 context.show_text(data)
                 context.restore()
-        # else:
-        #     how_many += 1
-        # print("How many?", how_many)
 
         curr_x = start_x
         end_x = table_extents.entries_width
@@ -635,10 +618,8 @@ class ChooserTable(UncheckedContainer):
         self.add(self.navigator)
         self.add(self.back_button)
         def adjust_skip(value):
-            print("Old:", self.skip)
             skip = self.skip
             self.skip = skip + value
-            print("New:", self.skip)
             self.invalidate()
 
         self.navigator.on_up_arrow_action = lambda: adjust_skip(-1)
@@ -664,7 +645,6 @@ class ChooserTable(UncheckedContainer):
 
     @skip.setter
     def skip(self, value):
-        print("New value!", value)
         self.contents.skip = value
 
     @property
@@ -695,7 +675,6 @@ class ChooserTable(UncheckedContainer):
         self.contents.on_draw(widget, context)
         offset = self.contents.table_width + navigator_margin
         tot = len(self.contents.entries)
-        print(tot, self.contents.base, self.contents._shown)
         self.navigator.skip = self.contents.base / tot
         self.navigator.fill = self.contents._shown / tot
         self.navigator.translate(offset, 0)
@@ -745,9 +724,6 @@ def main() -> int:
         TableEntry(scheme.title, scheme.hard, len(scheme.rows), len(scheme.cols))
         for scheme in schemes
     ]
-
-    for scheme in schemes:
-        print(scheme.title)
 
     table = ChooserTable(table_entries)
 

@@ -33,6 +33,4 @@ for (k, v) in _keys_r.items():
         global_movement_keys[e] = k
 del _keys_r 
 
-# global_animator = Animator()
-
 menu_button_dim = Point(100, 30)

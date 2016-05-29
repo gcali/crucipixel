@@ -116,7 +116,7 @@ def create_main_menu(root: Root) -> Callable[[], None]:
             ], [
                 click_left_button_wrapper(lambda: print("New game!")),
                 click_left_button_wrapper(lambda: print("Create level!")),
-                click_left_button_wrapper(lambda: None),
+                click_left_button_wrapper(lambda: print("Help")),
                 click_left_button_wrapper(lambda: Gtk.main_quit())
             ])
         main_menu.set_callback(0, click_left_button_wrapper(create_new_game(root)))
@@ -132,7 +132,6 @@ def main() -> int:
 
     win = MainWindow(title="CrucipixelGTK")
     win.connect("delete-event", lambda *args: Gtk.main_quit)
-    print(Gdk.RGBA)
     win.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(.9,.9,.9,1))
     root = Root()
     root.set_min_size(500, 500)

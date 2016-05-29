@@ -68,7 +68,6 @@ class CompleteCrucipixel(UncheckedContainer):
                  cell_size=20,
                  *args, **kwargs):
         super().__init__(*args,**kwargs)
-        print("Starting at", start)
         self.translate(start.x,start.y)
         self.cell_size = cell_size
         self.grid = CrucipixelGrid(crucipixel, cell_size, cell_size)
@@ -117,7 +116,6 @@ class CompleteCrucipixel(UncheckedContainer):
         self.grid.is_destroyed = value
 
     def on_key_down(self, w, e):
-        print("I was a key down!", e.key, e.modifiers)
         if e.key == "=" or e.key == "+":
             self.zoom_in()
             return True
@@ -213,7 +211,6 @@ class PuzzleScreen(UncheckedContainer):
                 self.crucipixel.grid.victory_screen = False
                 overlay.visible = False
                 self.buttons.set_undo()
-                print("Hi!")
         update_win_status(crucipixel.is_won)
         self.buttons.on_edit_action = click_left_button_wrapper(lambda: update_win_status(False))
 

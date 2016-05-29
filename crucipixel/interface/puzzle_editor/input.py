@@ -133,8 +133,6 @@ class Text(Widget):
             for w, h in sizes:
                 max_height = max(h, max_height)
 
-            # print(max_height)
-
             width = self.width
             height = self.padding * 3 + max_height
 
@@ -168,7 +166,6 @@ class Text(Widget):
         context.show_text(self.label)
 
     def on_key_down(self, widget: "Widget", event: KeyboardEvent):
-        print("Hi from me!")
         if self.is_focused:
             c = event.key
             if c == 'space':
@@ -190,7 +187,6 @@ class TextExpandable(Text):
 
     def layout(self, context: cairo.Context):
         if self.father is not None:
-            print("Container size:", self.container_size[0])
             self.width = self.container_size[0] - self.expansion_padding
         super().layout(context)
 

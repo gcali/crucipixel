@@ -59,21 +59,3 @@ def parse_file_name(file_name: str) -> CrucipixelCompleteModel:
         parsed.file_name_complete = file_name
         return parsed
 
-
-
-def main(args: List[str]) -> int:
-    for s in args:
-        print(parse_file_name(s))
-
-
-if __name__ == '__main__':
-    files=["al_parco.json", "brachiosauri.json", "monopattino.json", "mostro.json", "uccellino.json"]
-    # for name in files:
-    #     scheme = parse_file_name("../data/" + name)
-    #     print(scheme)
-    for name in files:
-        with open("../data/" + name, "r") as f:
-            scheme = CrucipixelScheme.from_json_object(json.load(f))
-            model = CrucipixelCompleteModel(scheme, [])
-            # with open(os.path.expanduser("~") + "/" + ".crucipixel/" + name, "w") as fw:
-            #     print(encode_model(model), file=fw)

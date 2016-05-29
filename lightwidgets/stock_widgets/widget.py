@@ -113,9 +113,7 @@ class Widget:
     
     @father.setter
     def father(self,value):
-#         print(self,"Setting father to:", str(value))
         for signal in self.signals.keys():
-#             print(self,"Adding signal {} to {}".format(signal,str(value)))
             value.register_signal_for_child(signal,self)
         self._father = value
         
@@ -255,12 +253,10 @@ class Widget:
     def register_signal(self,signal_name:"str",callback:"function"):
         try:
             self.signals[signal_name].append(callback)
-#             print(self,"I've been succesfully added")
         except KeyError:
             self.signals[signal_name] = []
             return self.register_signal(signal_name, callback)
         if self.father:
-#             print(self, "Father was:",str(self.father))
             self.father.register_signal_for_child(signal_name,self)
     
     def handle_signal(self,signal_name,*args):
@@ -269,8 +265,7 @@ class Widget:
                 callback(*args)
         except KeyError:
             pass
-#             print("No signal {} registered to {}".format(signal_name,self.ID),file=stderr)
-    
+
     def broadcast_lw_signal(self,signal_name,*args):
         return self.father.broadcast_lw_signal(signal_name,*args)
     

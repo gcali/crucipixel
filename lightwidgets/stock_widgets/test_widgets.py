@@ -45,7 +45,6 @@ class Line(Widget):
         height=self.endP.x - self.startP.x
         c.rectangle(self.startP.x, self.startP.y,width,height)
         c.clip()
-#         print(self,c.clip_extents())
 
 class BorderedString(Widget):
     

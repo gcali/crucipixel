@@ -11,14 +11,6 @@ from lightwidgets.stock_widgets.layout import SetAlignment, Alignment
 from lightwidgets.stock_widgets.overlay import ButtonedTextOverlay
 
 
-"""
-Salve,
-
-Sono Giovanni Calì, uno studente del corso di laurea di Informatica.
-
-A Gennaio ho sostenuto l'esame di Esperienze di Programmazione
-"""
-
 class EditorScreen(UncheckedContainer):
 
     def __init__(self, core_crucipixel: core.CrucipixelEditor):
