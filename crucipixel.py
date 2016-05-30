@@ -1,3 +1,5 @@
+#!/usr/bin/env python3.5
+
 from app.main import main as crucipixel_main
 
 
