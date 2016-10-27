@@ -1,0 +1,6 @@
+{
+  "name": "Crucipixel",
+  "tagline": "Crucipixel based puzzle game",
+  "body": "# Crucipixel\r\n\r\nCrucipixel is a simple application for Linux to play with crucipixels (also called [nonograms](https://en.wikipedia.org/wiki/Nonogram)).\r\n\r\n### Easy to use\r\n\r\nIf you have a modern Linux environment, chances are you won't need to do anything to play Crucipixel! It simply requires `Python3` and `PyGObject` to be run.\r\n\r\nSimply run `crucipixel` and enjoy!\r\n\r\n### Install schemes\r\n\r\nIf you want to add some basic scheme examples, just run `setup.sh`\r\n\r\n### Add new schemes\r\n\r\nYou can easily create new schemes with `Crucipixel`'s internal editor; if you prefer to code things by hand, the schemes are encoded in a simple JSON format!\r\n\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
